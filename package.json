@@ -1,0 +1,19 @@
+{
+  "name": "based",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "seed": "node src/seed_all.js",
+    "seed:clientes": "node src/seed_clientes_parallel.js",
+    "seed:productos": "node src/seed_productos_parallel.js",
+    "seed:variaciones": "node src/seed_variaciones_parallel.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "mongodb": "^7.1.0"
+  }
+}

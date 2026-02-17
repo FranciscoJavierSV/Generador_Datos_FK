@@ -1,0 +1,30 @@
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seed_app:
+    build: .
+    container_name: seed_app
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - SEED_N=${SEED_N}
+      - SEED_BATCH=${SEED_BATCH}
+      - SEED_WORKERS=${SEED_WORKERS}
+    restart: "no"
+
+volumes:
+  mongo_data:

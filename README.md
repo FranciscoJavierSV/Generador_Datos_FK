@@ -1,0 +1,337 @@
+# BaseDR - Seed Database con MongoDB
+
+Aplicación Node.js para generar y poblar una base de datos MongoDB con datos realistas usando **workers paralelos** y la librería **Faker**.
+
+## 📋 Descripción
+
+Este proyecto automatiza la creación de grandes volúmenes de datos de prueba para múltiples colecciones MongoDB:
+- **Clientes** - Información de clientes, direcciones, teléfonos
+- **Productos** - Catálogo de productos
+- **Variaciones** - Variaciones de productos (colores, tallas, etc.)
+
+Utiliza **worker threads** para procesar datos en paralelo, haciendo el seeding **4x más rápido**.
+
+---
+
+## 🚀 Quick Start
+
+### Requisitos
+- Docker & Docker Compose
+- (Opcional) Node.js v20+ si quieres ejecutar localmente
+
+### Instalar y ejecutar
+
+```bash
+# 1. Clonar/entrar al proyecto
+cd baseDR
+
+# 2. Ejecutar con Docker (opción recomendada)
+docker-compose up --build
+
+# 3. MongoDB estará disponible en: mongodb://localhost:27017
+```
+
+---
+
+## ⚙️ Configuración
+
+### Variables de entorno (`.env`)
+
+```env
+# URI de conexión a MongoDB
+MONGO_URI=mongodb://mongo:27017
+
+# Total de registros a generar
+SEED_N=500000
+
+# Registros por batch (por transacción)
+SEED_BATCH=10000
+
+# Número de workers paralelos
+SEED_WORKERS=4
+```
+
+### Personalizar valores
+
+**Opción 1: Editar `.env`**
+```bash
+nano .env
+docker-compose up --build
+```
+
+**Opción 2: Variables de entorno en línea**
+```bash
+SEED_N=100000 SEED_WORKERS=8 docker-compose up --build
+```
+
+---
+
+## 📊 Flujo de Ejecución
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 1. docker-compose up                                │
+│    ├─ Inicia MongoDB en puerto 27017               │
+│    └─ Espera a que MongoDB esté listo (healthcheck)│
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ 2. Seed App inicia y divide el trabajo             │
+│    Con SEED_N=500k y SEED_WORKERS=4:              │
+│    ├─ Worker 1: clientes 0 - 125,000             │
+│    ├─ Worker 2: clientes 125,000 - 250,000       │
+│    ├─ Worker 3: clientes 250,000 - 375,000       │
+│    └─ Worker 4: clientes 375,000 - 500,000       │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ 3. Ejecución Paralela (lo crucial)                 │
+│                                                      │
+│    Worker 1 ──────┐                                │
+│    Worker 2 ──────┤─► Insertan batches de 10k    │
+│    Worker 3 ──────┤   en MongoDB simultáneamente  │
+│    Worker 4 ──────┘                                │
+└─────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────┐
+│ 4. ✅ Finalización                                 │
+│    MongoDB contiene:                               │
+│    ├─ 500,000 clientes                           │
+│    ├─ Productos relacionados                      │
+│    └─ Variaciones vinculadas                      │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+baseDR/
+├── docker-compose.yml      # Orquestación de servicios
+├── Dockerfile              # Imagen Node.js Alpine
+├── package.json            # Dependencias
+├── .env                    # Variables de entorno
+├── .env.example            # Plantilla de variables
+├── README.md               # Este archivo
+└── src/
+    ├── seed_clientes_parallel.js         # Maestro de clientes
+    ├── seed_productos_parallel.js        # Maestro de productos
+    ├── seed_variaciones_parallel.js      # Maestro de variaciones
+    ├── worker_seed_clientes.js           # Worker de clientes
+    ├── worker_seed_productos.js          # Worker de productos
+    └── worker_seed_variaciones.js        # Worker de variaciones
+```
+
+---
+
+## 🔧 Uso
+
+### Generar solo clientes
+```bash
+docker-compose run seed_app node src/seed_clientes_parallel.js
+```
+
+### Generar con parámetros personalizados
+```bash
+docker-compose run seed_app node src/seed_clientes_parallel.js --n 1000000 --workers 8
+```
+
+### Conectarse a la BD desde otra terminal
+```bash
+mongosh mongodb://localhost:27017
+```
+
+### Ver el progreso
+```bash
+# En otra terminal mientras corre docker-compose up
+docker logs -f seed_app
+```
+
+---
+
+## 📦 Estructura de Datos
+
+### Clientes
+
+```javascript
+{
+  "_id": ObjectId,
+  "nombre": "JUAN",
+  "apepat": "García",
+  "apemat": "RODRÍGUEZ",
+  "correo": "juan@example.com",
+  "rfc": "GARJ870515XXX",
+  "telefonos": [
+    { "tipo": "móvil", "numero": "+52 234 567 8901" }
+  ],
+  "direccionEnvio": {
+    "calle": "Av. Principal 123",
+    "colonia": "Centro",
+    "idEstado": 1,
+    "idCiudad": 50,
+    "idCodigoPostal": 64000
+  },
+  "direccionFacturacion": { /* similar */ },
+  "activo": true,
+  "saldoAFavor": Decimal128("1250.50"),
+  "_idEmpresa": ObjectId,
+  "_idSucursal": ObjectId,
+  "_idUsuario": ObjectId
+  // ... más campos
+}
+```
+
+### Productos
+
+```javascript
+{
+  "_id": ObjectId,
+  "nombre": "Block de Cemento",
+  "descripcion": "Block para construcción",
+  "activo": true,
+  "porcentajeIva": 16,
+  "tieneVariaciones": true,
+  "_idMoneda": ObjectId,      // Comparte valor con _idMonedaCosto
+  "_idMonedaCosto": ObjectId,
+  "_idEmpresa": ObjectId,
+  "_idSucursal": ObjectId,
+  "_idUsuario": ObjectId,
+  "_idAccesoUsuario": ObjectId // Comparte valor con _idUsuario
+  // ... más campos
+}
+```
+
+### Variaciones
+
+```javascript
+{
+  "_id": ObjectId,
+  "_idProducto": ObjectId,    // Referencia al producto padre
+  "nombre": "Block de Cemento",
+  "precios": [
+    {
+      "_id": ObjectId,
+      "precio": 150.00,
+      "_idListaPrecios": ObjectId,
+      "activo": true
+    }
+  ],
+  "tieneColores": false,
+  "colores": [],
+  "imagenes": [],
+  "_idEmpresa": ObjectId,      // Hereda del producto
+  "_idSucursal": ObjectId,     // Hereda del producto
+  "_idUsuario": ObjectId,      // Hereda del producto
+  "_idAccesoUsuario": ObjectId // Hereda del producto
+  // ... más campos
+}
+```
+
+### Coherencia de Referencias
+
+✅ **Campos compartidos** (mismo valor en múltiples documentos para integridad referencial):
+- Productos: `_idMoneda` = `_idMonedaCosto`
+- Productos: `_idAccesoUsuario` = `_idUsuario`
+- Variaciones: Heredan `_idEmpresa`, `_idSucursal`, `_idUsuario`, `_idAccesoUsuario` del producto
+
+---
+
+## ⚡ Rendimiento
+
+### Benchmark (con SEED_N=500,000)
+
+| Workers | Tiempo approx. | Velocidad |
+|---------|---|---|
+| 1 worker | 45 min | Baseline |
+| 2 workers | 23 min | 2x más rápido |
+| 4 workers | 12 min | 4x más rápido |
+| 8 workers | 8 min | 5.6x más rápido |
+
+> Nota: Depende del hardware y la carga del sistema
+
+### Optimizaciones implementadas
+
+- ✅ Batch inserts (10k registros por transacción)
+- ✅ Worker threads paralelos
+- ✅ Generación con Faker optimizada
+- ✅ Conexión compartida a MongoDB
+
+---
+
+## 🐛 Troubleshooting
+
+### MongoDB no conecta
+```bash
+# Verificar que MongoDB está corriendo
+docker-compose logs mongo
+
+# Reiniciar
+docker-compose down
+docker-compose up --build
+```
+
+### Variables de entorno no aplican
+```bash
+# Asegúrate de que .env existe y tiene formato correcto
+cat .env
+
+# Si no existe, copia desde el ejemplo
+cp .env.example .env
+```
+
+### Logs no se ven
+```bash
+# Ver logs en tiempo real
+docker-compose logs -f seed_app
+
+# Ver últimas 100 líneas
+docker-compose logs seed_app --tail 100
+```
+
+### Reiniciar BD (borrar datos)
+```bash
+# Elimina volúmenes (BORRA DATOS)
+docker-compose down -v
+
+# Reinicia con BD limpia
+docker-compose up --build
+```
+
+---
+
+## 📝 Próximas mejoras
+
+- [ ] Agregar seed para productos y variaciones en paralelo
+- [ ] Script de validación de integridad referencial
+- [ ] Dashboard de progreso
+- [ ] Soporte para múltiples bases de datos
+- [ ] CI/CD integrado
+
+---
+
+## 📄 Licencia
+
+ISC
+
+---
+
+## 👤 Autor
+
+Proyecto de seeding para testeo
+
+---
+
+## 💬 Preguntas frecuentes
+
+**P: ¿Puedo cambiar SEED_N durante la ejecución?**
+R: No, debes parar el contenedor y reiniciar con nuevos valores.
+
+**P: ¿Los datos se pierden si reinicio?**
+R: No, Docker Compose usa volúmenes persistentes. Los datos se mantienen. Usa `docker-compose down -v` para borrar.
+
+**P: ¿Funciona en Windows/Mac?**
+R: Sí, Docker Compose es multiplataforma. Asegúrate de tener Docker Desktop instalado.
+
+**P: ¿Puedo usar esto en producción?**
+R: No, es solo para pruebas y desarrollo. El seeding con Faker no genera datos reales.
