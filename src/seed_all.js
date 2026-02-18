@@ -1,6 +1,17 @@
 const { spawn } = require("child_process");
+const fs = require("fs");
+
+// ensure running inside Docker container
+if (!fs.existsSync("/.dockerenv")) {
+  console.error("❌ Este proyecto sólo puede ejecutarse dentro de un contenedor Docker.\n" +
+                "   Usa 'docker-compose up' desde la raíz del repositorio.");
+  process.exit(1);
+}
 
 const SEED_N = process.env.SEED_N || 500000;
+const SEED_N_CLIENTES = process.env.SEED_N_CLIENTES || SEED_N;
+const SEED_N_PRODUCTOS = process.env.SEED_N_PRODUCTOS || SEED_N;
+const SEED_N_FACTURAS = process.env.SEED_N_FACTURAS || SEED_N;
 const SEED_BATCH = process.env.SEED_BATCH || 10000;
 const SEED_WORKERS = process.env.SEED_WORKERS || 4;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
@@ -13,7 +24,7 @@ console.log(`   - Workers: ${SEED_WORKERS}`);
 console.log(`   - MongoDB: ${MONGO_URI}`);
 console.log("");
 
-function runScript(scriptPath, name) {
+function runScript(scriptPath, name, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     console.log(`\n▶️  ${name}...`);
     const startTime = Date.now();
@@ -24,7 +35,8 @@ function runScript(scriptPath, name) {
         SEED_N: SEED_N,
         SEED_BATCH: SEED_BATCH,
         SEED_WORKERS: SEED_WORKERS,
-        MONGO_URI: MONGO_URI
+        MONGO_URI: MONGO_URI,
+        ...extraEnv
       },
       stdio: "inherit"
     });
@@ -48,13 +60,25 @@ function runScript(scriptPath, name) {
 async function main() {
   try {
     // 1. Generar clientes
-    await runScript("./src/seed_clientes_parallel.js", "Generando clientes");
+    await runScript("./src/seed_clientes_parallel.js", "Generando clientes", {
+      SEED_N: SEED_N_CLIENTES
+    });
 
     // 2. Generar productos
-    await runScript("./src/seed_productos_parallel.js", "Generando productos");
+    await runScript("./src/seed_productos_parallel.js", "Generando productos", {
+      SEED_N: SEED_N_PRODUCTOS
+    });
 
     // 3. Generar variaciones (basadas en productos)
     await runScript("./src/seed_variaciones_parallel.js", "Generando variaciones");
+
+    // 4. Generar facturas
+    await runScript("./src/seed_facturas_parallel.js", "Generando facturas", {
+      SEED_N: SEED_N_FACTURAS
+    });
+
+    // 5. Generar datos de factura (líneas) basados en las facturas creadas
+    await runScript("./src/seed_datosfacturas_parallel.js", "Generando datos de factura");
 
     console.log("\n✅ 🎉 ¡Seeding completado con éxito!");
     process.exit(0);

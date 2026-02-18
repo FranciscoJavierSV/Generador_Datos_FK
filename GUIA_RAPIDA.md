@@ -15,7 +15,7 @@ El proyecto ahora genera datos **coherentes y realistas**:
 
 ```bash
 # 1. Ir al directorio
-cd /home/javi/baseDR
+cd ..../baseDR
 
 # 2. Construir y ejecutar
 docker-compose up --build

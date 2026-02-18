@@ -16,8 +16,7 @@ Utiliza **worker threads** para procesar datos en paralelo, haciendo el seeding 
 ## 🚀 Quick Start
 
 ### Requisitos
-- Docker & Docker Compose
-- (Opcional) Node.js v20+ si quieres ejecutar localmente
+- Docker & Docker Compose (el único entorno soportado por el proyecto)
 
 ### Instalar y ejecutar
 
@@ -25,7 +24,9 @@ Utiliza **worker threads** para procesar datos en paralelo, haciendo el seeding 
 # 1. Clonar/entrar al proyecto
 cd baseDR
 
-# 2. Ejecutar con Docker (opción recomendada)
+# 2. Ejecutar con Docker
+#    El contenedor de seeding comprueba que corre dentro de Docker y
+#    terminará si se invoca directamente desde Node.
 docker-compose up --build
 
 # 3. MongoDB estará disponible en: mongodb://localhost:27017
@@ -41,27 +42,48 @@ docker-compose up --build
 # URI de conexión a MongoDB
 MONGO_URI=mongodb://mongo:27017
 
-# Total de registros a generar
+# Número de registros a generar para clientes, productos y facturas.
+# Se aplica a todos si no se especifican valores separados.
 SEED_N=500000
+
+# Alternativas más finas:
+# - SEED_N_CLIENTES: registros de clientes
+# - SEED_N_PRODUCTOS: registros de productos
+# - SEED_N_FACTURAS: registros de facturas
+# úsalos para controlar cada colección por separado.
+# (variaciones se basan en producto, datosfactura en las facturas)
+#
+# Ejemplo:
+# SEED_N_CLIENTES=100000
+# SEED_N_PRODUCTOS=200000
+# SEED_N_FACTURAS=150000
 
 # Registros por batch (por transacción)
 SEED_BATCH=10000
 
-# Número de workers paralelos
+# Número de workers paralelos (clientes y productos)
 SEED_WORKERS=4
 ```
 
 ### Personalizar valores
 
-**Opción 1: Editar `.env`**
-```bash
-nano .env
-docker-compose up --build
-```
+Puedes ajustar cualquier variable de entorno en el fichero `.env` antes de
+levantar los contenedores. La conexión a la base de datos está definida por
+`MONGO_URI` y puede apuntar a un servidor local o a una base externa.
 
-**Opción 2: Variables de entorno en línea**
+También puedes controlar por separado la cantidad de clientes y productos
+usando `SEED_N_CLIENTES` y `SEED_N_PRODUCTOS`. Si no se establecen, ambos usan
+el valor de `SEED_N`.
+
+> ℹ️ Para cambiar a una base de datos remota simplemente edita `.env` o
+> exporta `MONGO_URI` en la línea de comandos antes de hacer `docker-compose
+> up`.
+
 ```bash
-SEED_N=100000 SEED_WORKERS=8 docker-compose up --build
+# ejemplo apuntando a Atlas + ajustando conteos
+MONGO_URI="mongodb+srv://user:pass@cluster.mongodb.net/mydb" \
+  SEED_N_CLIENTES=100000 SEED_N_PRODUCTOS=200000 \
+  docker-compose up --build
 ```
 
 ---
@@ -129,11 +151,21 @@ baseDR/
 
 ### Generar solo clientes
 ```bash
-docker-compose run seed_app node src/seed_clientes_parallel.js
+# usa --n o SEED_N_CLIENTES para especificar la cantidad
+docker-compose run seed_app node src/seed_clientes_parallel.js --n 100000
 ```
-
+### Generar facturas y datos de factura
+```bash
+# facturas tomará clientes ya existentes
+docker-compose run seed_app node src/seed_facturas_parallel.js --n 50000
+# después puedes generar los detalles:
+docker-compose run seed_app node src/seed_datosfacturas_parallel.js
+```
 ### Generar con parámetros personalizados
 ```bash
+# cualquier maestro acepta --n, --batch, --workers y --uri
+# (productos puede leer --n de SEED_N_PRODUCTOS si está en .env)
+
 docker-compose run seed_app node src/seed_clientes_parallel.js --n 1000000 --workers 8
 ```
 
@@ -202,6 +234,52 @@ docker logs -f seed_app
 }
 ```
 
+### Facturas
+
+```javascript
+{
+  "_id": ObjectId,
+  "_idCliente": ObjectId,
+  "fecha": ISODate,
+  "subtotal": Number,
+  "descuento": Number,
+  "iva": Number,
+  "total": Number,
+  "observaciones": String,
+  "_idSucursal": ObjectId,
+  "_idEmpresa": ObjectId,
+  "_idUsuario": ObjectId,
+  "id": Number,
+  "serie": String,
+  "folio": Number,
+  "uuid": String,
+  "version": "3.3",
+  "activo": true
+  // campos SAT, pagos, etc. se generan aleatoriamente
+}
+```
+
+### DatosFactura (líneas)
+
+```javascript
+{
+  "_id": ObjectId,
+  "_idFactura": ObjectId,
+  "claveProdServ": ObjectId,
+  "claveUnidad": ObjectId,
+  "producto": String,
+  "detalle": String,
+  "cantidad_producto": Number,
+  "precio_unitario": String,
+  "precio_total": String,
+  "iva_total": Number,
+  "descuento": Number,
+  "id": Number,
+  "_idEmpresa": ObjectId
+  // hereda algunas referencias de la factura padre
+}
+```
+
 ### Variaciones
 
 ```javascript
@@ -225,6 +303,52 @@ docker logs -f seed_app
   "_idUsuario": ObjectId,      // Hereda del producto
   "_idAccesoUsuario": ObjectId // Hereda del producto
   // ... más campos
+}
+```
+
+### Facturas
+
+```javascript
+{
+  "_id": ObjectId,
+  "_idCliente": ObjectId,
+  "fecha": ISODate,
+  "subtotal": Number,
+  "descuento": Number,
+  "iva": Number,
+  "total": Number,
+  "observaciones": String,
+  "_idSucursal": ObjectId,
+  "_idEmpresa": ObjectId,
+  "_idUsuario": ObjectId,
+  "id": Number,
+  "serie": String,
+  "folio": Number,
+  "uuid": String,
+  "version": "3.3",
+  "activo": true
+  // ... más campos aleatorios
+}
+```
+
+### DatosFactura (líneas de factura)
+
+```javascript
+{
+  "_id": ObjectId,
+  "_idFactura": ObjectId,
+  "claveProdServ": ObjectId,
+  "claveUnidad": ObjectId,
+  "producto": String,
+  "detalle": String,
+  "cantidad_producto": Number,
+  "precio_unitario": String,
+  "precio_total": String,
+  "iva_total": Number,
+  "descuento": Number,
+  "id": Number,
+  "_idEmpresa": ObjectId
+  // hereda referencias de la factura padre
 }
 ```
 

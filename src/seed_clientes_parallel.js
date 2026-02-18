@@ -1,7 +1,19 @@
+const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
 
-const total = args.n || process.env.SEED_N || 500000;
+// enforce Docker-only execution
+if (!fs.existsSync("/.dockerenv")) {
+  console.error("❌ Este script sólo se ejecuta dentro de Docker. Usa docker-compose para iniciar.");
+  process.exit(1);
+}
+
+// permite especificar un número distinto para clientes
+const total =
+  args.n ||
+  process.env.SEED_N_CLIENTES ||
+  process.env.SEED_N ||
+  500000;
 const batch = args.batch || process.env.SEED_BATCH || 10000;
 const workers = args.workers || process.env.SEED_WORKERS || 4;
 const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";

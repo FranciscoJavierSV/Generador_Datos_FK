@@ -28,31 +28,29 @@ mongosh mongodb://localhost:27017
 # Esperado: { ok: 1 }
 ```
 
-## 🚀 Ejecución Local
+## 🚀 Ejecución (solo Docker)
 
-### Opción 1: Completo (Clientes + Productos + Variaciones)
+# Contar clientes y productos por separado
+Puedes pasar `SEED_N_CLIENTES` y `SEED_N_PRODUCTOS` en el `.env` o en la
+línea de arranque si quieres generar cantidades distintas. Por ejemplo:
+
 ```bash
-cd /home/javi/baseDR
-npm install
-MONGO_URI=mongodb://localhost:27017 npm run seed
+# 100k clientes y 300k productos
+SEED_N_CLIENTES=100000 SEED_N_PRODUCTOS=300000 \
+  docker-compose up --build
 ```
 
-### Opción 2: Por partes
+
+Los scripts están diseñados para ejecutarse desde un contenedor. Cualquier
+invocación directa a `node` terminará con un mensaje de error. Usa los comandos
+siguientes para pruebas rápidas.
+
 ```bash
-# Solo clientes (500k)
-MONGO_URI=mongodb://localhost:27017 npm run seed:clientes
+# iniciar con configuración del entorno definido en .env
+docker-compose up --build
 
-# Solo productos (500k)
-MONGO_URI=mongodb://localhost:27017 npm run seed:productos
-
-# Solo variaciones
-MONGO_URI=mongodb://localhost:27017 npm run seed:variaciones
-```
-
-### Opción 3: Con parámetros personalizados
-```bash
-node src/seed_clientes_parallel.js --n 100000 --workers 2 --batch 5000
-node src/seed_productos_parallel.js --n 100000 --workers 2 --batch 5000
+# ejecutar un solo proceso dentro del servicio de seeding
+docker-compose run --rm seed_app node src/seed_clientes_parallel.js
 ```
 
 ## 🐳 Ejecución con Docker
@@ -76,10 +74,18 @@ docker run --network host -e MONGO_URI=mongodb://localhost:27017 basedр:latest
 
 ### Conectarse a MongoDB
 ```bash
-mongosh mongodb://localhost:27017
+# la cadena de conexión depende de MONGO_URI configurado en .env
+mongosh "$MONGO_URI"
 use test
 ```
 
+### Ver collections nuevas
+```javascript
+// Facturas creadas
+db.facturas.countDocuments()
+// Detalles de factura (datosfactura)
+db.datosfactura.countDocuments()
+```
 ### Verificar Colecciones
 ```javascript
 // Contar documentos

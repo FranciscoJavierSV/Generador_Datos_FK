@@ -8,9 +8,20 @@
       1. Clientes (500k)
       2. Productos (500k)
       3. Variaciones (dinámicas)
+      4. Facturas (dependiente de clientes)
+      5. Datos de factura (líneas, dependientes de facturas)
 
 📄 CAMBIOS.md
    └─ Documentación detallada de cambios técnicos
+
+✨ src/seed_facturas_parallel.js
+   └─ Maestro que genera facturas enlazando clientes
+✨ src/worker_seed_facturas.js
+   └─ Worker que crea docuemntos de factura con referencias
+✨ src/seed_datosfacturas_parallel.js
+   └─ Maestro para generar detalles de factura (1‑n)
+✨ src/worker_seed_datosfacturas.js
+   └─ Worker que despliega las líneas usando facturas y productos
 
 📄 ANTES_DESPUES.md
    └─ Comparación visual antes vs después
@@ -123,6 +134,36 @@ function generarProducto(index, sucursal, empresa, moneda, unidad, claveProd, us
 ---
 
 ### 3. src/worker_seed_variaciones.js ⭐ CAMBIO PRINCIPAL
+
+### 4. Nuevas colecciones: facturas y datosfactura
+
+Se añadió un nuevo flujo de seeding para simular un esquema de facturación.
+Se generarán facturas asociadas a clientes y, para cada factura, entre 1 y 5
+líneas de detalle (`datosfactura`) que también toman datos de productos.
+
+**Archivos nuevos:**
+```text
+src/seed_facturas_parallel.js
+src/worker_seed_facturas.js
+src/seed_datosfacturas_parallel.js
+src/worker_seed_datosfacturas.js
+```
+
+**Cambios relacionados:**
+- `src/seed_all.js` ahora ejecuta las etapas de facturas y datosfactura después de
+  variaciones y admite la variable `SEED_N_FACTURAS`.
+- `package.json` incluye scripts `seed:facturas` y `seed:datosfacturas`.
+- Documentación (`README.md`, `TESTING.md`, `.env.example`, etc.) actualizado
+  para describir las nuevas colecciones y variables de entorno.
+
+```javascript
+// en seed_all.js:
+const SEED_N_FACTURAS = process.env.SEED_N_FACTURAS || SEED_N;
+// ...
+await runScript("./src/seed_facturas_parallel.js", "Generando facturas", { SEED_N: SEED_N_FACTURAS });
+await runScript("./src/seed_datosfacturas_parallel.js", "Generando datos de factura");
+```
+
 
 **ANTES:**
 ```javascript
@@ -278,7 +319,37 @@ require("./worker_seed_variaciones").run({ start: 0, end: undefined, batch, uri 
 
 ---
 
-### 7. Dockerfile
+### 7. Adición de facturas y datosfactura
+
+**Archivos nuevos:**
+```text
+src/seed_facturas_parallel.js
+src/worker_seed_facturas.js
+src/seed_datosfacturas_parallel.js
+src/worker_seed_datosfacturas.js
+```
+
+**Detalles:**
+- `seed_all.js` se actualizó para incluir etapas adicionales y manejar la
+  variable `SEED_N_FACTURAS`.
+- Las facturas se enlazan a clientes existentes; cada factura tiene fecha,
+  totales y referencias a sucursal/empresa/usuario.
+- Los detalles (`datosfactura`) se generan tras crear las facturas; cada uno
+  hereda el `_idFactura` y toma algunos campos de productos aleatorios.
+- Se añadió soporte en `package.json` para `seed:facturas` y
+  `seed:datosfacturas`.
+
+```javascript
+// extracto de seed_all.js
+const SEED_N_FACTURAS = process.env.SEED_N_FACTURAS || SEED_N;
+// …
+await runScript("./src/seed_facturas_parallel.js", "Generando facturas", { SEED_N: SEED_N_FACTURAS });
+await runScript("./src/seed_datosfacturas_parallel.js", "Generando datos de factura");
+```
+
+---
+
+### 8. Dockerfile
 
 **ANTES:**
 ```dockerfile

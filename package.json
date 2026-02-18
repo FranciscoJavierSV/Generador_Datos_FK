@@ -7,13 +7,16 @@
     "seed": "node src/seed_all.js",
     "seed:clientes": "node src/seed_clientes_parallel.js",
     "seed:productos": "node src/seed_productos_parallel.js",
-    "seed:variaciones": "node src/seed_variaciones_parallel.js"
+    "seed:variaciones": "node src/seed_variaciones_parallel.js",
+    "seed:facturas": "node src/seed_facturas_parallel.js",
+    "seed:datosfacturas": "node src/seed_datosfacturas_parallel.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@faker-js/faker": "^10.3.0",
+    "minimist": "^1.2.8",
     "mongodb": "^7.1.0"
   }
 }

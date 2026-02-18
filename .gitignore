@@ -2,3 +2,7 @@ node_modules/
 logs/
 .env
 .DS_Store
+
+# private SSH keys (accidentally committed)
+no
+no.pub
