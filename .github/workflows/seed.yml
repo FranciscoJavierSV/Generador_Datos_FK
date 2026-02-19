@@ -20,9 +20,9 @@ jobs:
       - name: Inspect built image
         run: |
           echo "--- Inspecting built image for debug strings ---"
-          # Print presence of our diagnostic log and head of worker file inside the image
+          # Print presence of our diagnostic log and head of worker file and seed_all inside the image
           docker run --rm base-dr-seeder:latest sh -c \
-            "grep -n 'Parámetros recibidos' /app/src/*.js || true; echo '--- worker file head ---'; sed -n '1,200p' /app/src/worker_seed_clientes.js || true"
+            "grep -n 'Parámetros recibidos' /app/src/*.js || true; echo '--- worker file head ---'; sed -n '1,200p' /app/src/worker_seed_clientes.js || true; echo '--- seed_all head ---'; sed -n '1,200p' /app/src/seed_all.js || true"
 
       - name: Run seeder
         run: |
