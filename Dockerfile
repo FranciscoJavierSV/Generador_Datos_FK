@@ -1,11 +1,11 @@
-FROM node:20-alpine
+# switch to Debian slim image to get a complete OpenSSL stack and avoid
+# Alpine-specific TLS quirks. The slim variant still keeps the image small
+# but eliminates handshake errors with MongoDB Atlas.
+FROM node:20-slim
 
-# alpine base images are minimal and often lack CA certificates
-# which are required for TLS connections (e.g. Atlas +srv URI).
-# also install openssl to ensure the runtime has the full set of
-# cipher suites and crypto primitives; without it the handshake can
-# fail with `tlsv1 alert internal error`.
-RUN apk add --no-cache ca-certificates openssl && update-ca-certificates
+# Debian images already include certificates and openssl, so no extra
+# installation is required here. If you need additional packages you can
+# add them with apt-get in future.
 
 WORKDIR /app
 
