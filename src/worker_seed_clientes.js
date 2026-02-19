@@ -81,50 +81,68 @@ function generarCliente(index, sucursal, empresa, listaPrecios) {
   };
 }
 
-async function run({ start, end, batch, uri }) {
-  const client = new MongoClient(uri);
-  await client.connect();
-  const db = client.db("test");
-  const collection = db.collection("clientes");
+async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhost:27017" }) {
+  try {
+    const client = new MongoClient(uri);
+    await client.connect();
+    const db = client.db("test");
+    const collection = db.collection("clientes");
 
-  // Crear referencias constantes
-  const sucursales = Object.entries(SUCURSALES).map(([id, nombre]) => ({
-    _id: new ObjectId(id),
-    _idAccesoUsuario: new ObjectId(),
-    _idUsuario: new ObjectId(),
-    nombre
-  }));
+    // Crear referencias constantes
+    const sucursales = Object.entries(SUCURSALES).map(([id, nombre]) => ({
+      _id: new ObjectId(id),
+      _idAccesoUsuario: new ObjectId(),
+      _idUsuario: new ObjectId(),
+      nombre
+    }));
 
-  const empresas = Object.entries(EMPRESAS).map(([id, nombre]) => ({
-    _id: new ObjectId(id),
-    nombre
-  }));
+    const empresas = Object.entries(EMPRESAS).map(([id, nombre]) => ({
+      _id: new ObjectId(id),
+      nombre
+    }));
 
-  const listasPreciosArray = Object.entries(LISTAS_PRECIOS).map(([id, nombre]) => ({
-    _id: new ObjectId(id),
-    nombre
-  }));
+    const listasPreciosArray = Object.entries(LISTAS_PRECIOS).map(([id, nombre]) => ({
+      _id: new ObjectId(id),
+      nombre
+    }));
 
-  for (let i = start; i < end; i += batch) {
-    const docs = [];
-    for (let j = i; j < Math.min(i + batch, end); j++) {
-      const sucursal = faker.helpers.arrayElement(sucursales);
-      const empresa = faker.helpers.arrayElement(empresas);
-      const listaPrecios = faker.helpers.arrayElement(listasPreciosArray);
-      docs.push(generarCliente(j, sucursal, empresa, listaPrecios));
+    for (let i = start; i < end; i += batch) {
+      const docs = [];
+      for (let j = i; j < Math.min(i + batch, end); j++) {
+        const sucursal = faker.helpers.arrayElement(sucursales);
+        const empresa = faker.helpers.arrayElement(empresas);
+        const listaPrecios = faker.helpers.arrayElement(listasPreciosArray);
+        docs.push(generarCliente(j, sucursal, empresa, listaPrecios));
+      }
+
+      // ✅ Validación para evitar lotes vacíos
+      if (docs.length > 0) {
+        await collection.insertMany(docs);
+        console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
+      }
     }
 
-    // ✅ Validación para evitar lotes vacíos
-    if (docs.length > 0) {
-      await collection.insertMany(docs);
-      console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
+    await client.close();
+    if (parentPort) {
+      parentPort.postMessage({ status: "done" });
     }
-  }
-
-  await client.close();
-  if (parentPort) {
-    parentPort.postMessage("done");
+    return;
+  } catch (err) {
+    console.error("Error en worker_seed_clientes:", err);
+    if (parentPort) {
+      parentPort.postMessage({ status: "error", message: err.message || String(err) });
+    }
+    // Re-throw para que, si se ejecuta en single-thread, el proceso padre reciba el rechazo
+    throw err;
   }
 }
 
 module.exports = { run };
+
+// Si el archivo se ejecuta como Worker thread, arrancar automáticamente
+if (typeof workerData !== "undefined" && workerData !== null) {
+  run(workerData).catch((err) => {
+    // ya se envió mensaje al padre en el catch interno; asegurar salida no silenciosa
+    process.exit(1);
+  });
+}
