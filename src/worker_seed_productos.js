@@ -72,7 +72,19 @@ function generarProducto(index, sucursal, empresa, moneda, unidad, claveProd, us
   };
 }
 
-async function run({ start, end, batch, uri }) {
+async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhost:27017" }) {
+  // coerce números y validar
+  start = Number(start);
+  end = Number(end);
+  batch = Number(batch);
+  if (isNaN(start) || isNaN(end) || isNaN(batch) || batch <= 0) {
+    throw new Error(`Parámetros inválidos start=${start} end=${end} batch=${batch}`);
+  }
+  if (start >= end) {
+    if (parentPort) parentPort.postMessage("done");
+    return;
+  }
+
   const client = new MongoClient(uri);
   await client.connect();
   const db = client.db("test");
@@ -111,19 +123,23 @@ async function run({ start, end, batch, uri }) {
   };
 
   for (let i = start; i < end; i += batch) {
-    const docs = [];
-    for (let j = i; j < Math.min(i + batch, end); j++) {
-      const sucursal = faker.helpers.arrayElement(sucursales);
-      const empresa = faker.helpers.arrayElement(empresas);
-      const moneda = faker.helpers.arrayElement(monedas);
-      const unidad = faker.helpers.arrayElement(unidades);
-      const claveProd = faker.helpers.arrayElement(clavesProd);
-      docs.push(generarProducto(j, sucursal, empresa, moneda, unidad, claveProd, usuarioInfo));
-    }
-    await collection.insertMany(docs);
-    console.log(`[Productos] Insertados ${Math.min(i + batch, end)}/${end}`);
-  }
+      const docs = [];
+      for (let j = i; j < Math.min(i + batch, end); j++) {
+        const sucursal = faker.helpers.arrayElement(sucursales);
+        const empresa = faker.helpers.arrayElement(empresas);
+        const moneda = faker.helpers.arrayElement(monedas);
+        const unidad = faker.helpers.arrayElement(unidades);
+        const claveProd = faker.helpers.arrayElement(clavesProd);
+        docs.push(generarProducto(j, sucursal, empresa, moneda, unidad, claveProd, usuarioInfo));
+      }
 
+      if (docs.length > 0) {
+        await collection.insertMany(docs);
+        console.log(`[Productos] Insertados ${Math.min(i + batch, end)}/${end}`);
+      } else {
+        console.log(`[Productos] Saltando lote vacío (${i}-${Math.min(i+batch,end)})`);
+      }
+    }
   await client.close();
   if (parentPort) {
     parentPort.postMessage("done");

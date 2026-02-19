@@ -11,6 +11,12 @@ Este proyecto automatiza la creación de grandes volúmenes de datos de prueba p
 
 Utiliza **worker threads** para procesar datos en paralelo, haciendo el seeding **4x más rápido**.
 
+> ⚠️ Se añadieron validaciones extra en los workers para impedir que se invoque
+> `insertMany` con un lote vacío (error MongoInvalidArgumentError). Si ves
+> ese mensaje en los logs significa que uno de los parámetros (`--n`,
+> `--batch` o las variables de entorno) no era numérico o era 0. La imagen se
+> reconstruye automáticamente al levantar el contenedor.
+
 ---
 
 ## 🚀 Quick Start

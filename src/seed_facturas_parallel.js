@@ -8,14 +8,31 @@ if (!fs.existsSync("/.dockerenv")) {
 }
 
 // número de facturas a generar (puede venir de SEED_N_FACTURAS)
-const total =
+let total =
   args.n ||
   process.env.SEED_N_FACTURAS ||
   process.env.SEED_N ||
   100000;
-const batch = args.batch || process.env.SEED_BATCH || 10000;
-const workers = args.workers || process.env.SEED_WORKERS || 4;
+let batch = args.batch || process.env.SEED_BATCH || 10000;
+let workers = args.workers || process.env.SEED_WORKERS || 4;
 const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";
+
+// coerce y validar
+total = Number(total);
+batch = Number(batch);
+workers = Number(workers);
+if (isNaN(total) || total < 0) {
+  console.error("❌ Valor inválido para total de facturas:", total);
+  process.exit(1);
+}
+if (isNaN(batch) || batch <= 0) {
+  console.error("❌ Valor inválido para batch:", batch);
+  process.exit(1);
+}
+if (isNaN(workers) || workers <= 0) {
+  console.error("❌ Valor inválido para workers:", workers);
+  process.exit(1);
+}
 
 console.log(`📌 Seeding Facturas: ${total} registros con ${workers} workers`);
 

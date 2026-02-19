@@ -9,14 +9,33 @@ if (!fs.existsSync("/.dockerenv")) {
 }
 
 // permite especificar un número distinto para clientes
-const total =
+let total =
   args.n ||
   process.env.SEED_N_CLIENTES ||
   process.env.SEED_N ||
   500000;
-const batch = args.batch || process.env.SEED_BATCH || 10000;
-const workers = args.workers || process.env.SEED_WORKERS || 4;
+let batch = args.batch || process.env.SEED_BATCH || 10000;
+let workers = args.workers || process.env.SEED_WORKERS || 4;
 const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";
+
+// Asegurar que sean números válidos (GitHub Actions enmascara valores y puede
+// dejar cadenas asterisqueadas, lo que rompería las matemáticas de la división)
+total = Number(total);
+batch = Number(batch);
+workers = Number(workers);
+
+if (isNaN(total) || total < 0) {
+  console.error("❌ Valor inválido para total (SEED_N):", total);
+  process.exit(1);
+}
+if (isNaN(batch) || batch <= 0) {
+  console.error("❌ Valor inválido para batch (SEED_BATCH):", batch);
+  process.exit(1);
+}
+if (isNaN(workers) || workers <= 0) {
+  console.error("❌ Valor inválido para workers (SEED_WORKERS):", workers);
+  process.exit(1);
+}
 
 console.log(`📌 Seeding Clientes: ${total} registros con ${workers} workers`);
 

@@ -38,7 +38,18 @@ function generarFactura(index, cliente) {
   };
 }
 
-async function run({ start, end, batch, uri }) {
+async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhost:27017" }) {
+  start = Number(start);
+  end = Number(end);
+  batch = Number(batch);
+  if (isNaN(start) || isNaN(end) || isNaN(batch) || batch <= 0) {
+    throw new Error(`Parámetros inválidos start=${start} end=${end} batch=${batch}`);
+  }
+  if (start >= end) {
+    if (parentPort) parentPort.postMessage("done");
+    return;
+  }
+
   const client = new MongoClient(uri);
   await client.connect();
   const db = client.db("test");
@@ -48,14 +59,18 @@ async function run({ start, end, batch, uri }) {
   const clientes = await colClientes.find().toArray();
 
   for (let i = start; i < end; i += batch) {
-    const docs = [];
-    for (let j = i; j < Math.min(i + batch, end); j++) {
-      const cliente = faker.helpers.arrayElement(clientes);
-      docs.push(generarFactura(j, cliente));
+      const docs = [];
+      for (let j = i; j < Math.min(i + batch, end); j++) {
+        const cliente = faker.helpers.arrayElement(clientes);
+        docs.push(generarFactura(j, cliente));
+      }
+      if (docs.length > 0) {
+        await colFacturas.insertMany(docs);
+        console.log(`[Facturas] Insertados ${Math.min(i + batch, end)}/${end}`);
+      } else {
+        console.log(`[Facturas] Saltando lote vacío (${i}-${Math.min(i+batch,end)})`);
+      }
     }
-    await colFacturas.insertMany(docs);
-    console.log(`[Facturas] Insertados ${Math.min(i + batch, end)}/${end}`);
-  }
 
   await client.close();
   if (parentPort) {

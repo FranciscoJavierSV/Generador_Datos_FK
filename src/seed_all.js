@@ -8,12 +8,24 @@ if (!fs.existsSync("/.dockerenv")) {
   process.exit(1);
 }
 
-const SEED_N = process.env.SEED_N || 500000;
-const SEED_N_CLIENTES = process.env.SEED_N_CLIENTES || SEED_N;
-const SEED_N_PRODUCTOS = process.env.SEED_N_PRODUCTOS || SEED_N;
-const SEED_N_FACTURAS = process.env.SEED_N_FACTURAS || SEED_N;
-const SEED_BATCH = process.env.SEED_BATCH || 10000;
-const SEED_WORKERS = process.env.SEED_WORKERS || 4;
+// convertir y validar valores de entorno (evita problemas con secretos en
+// los logs de GitHub que aparecen como '***')
+let SEED_N = process.env.SEED_N || 500000;
+let SEED_N_CLIENTES = process.env.SEED_N_CLIENTES || SEED_N;
+let SEED_N_PRODUCTOS = process.env.SEED_N_PRODUCTOS || SEED_N;
+let SEED_N_FACTURAS = process.env.SEED_N_FACTURAS || SEED_N;
+let SEED_BATCH = process.env.SEED_BATCH || 10000;
+let SEED_WORKERS = process.env.SEED_WORKERS || 4;
+
+[SEED_N, SEED_N_CLIENTES, SEED_N_PRODUCTOS, SEED_N_FACTURAS, SEED_BATCH, SEED_WORKERS] =
+  [SEED_N, SEED_N_CLIENTES, SEED_N_PRODUCTOS, SEED_N_FACTURAS, SEED_BATCH, SEED_WORKERS].map(
+    (v) => Number(v)
+  );
+
+if ([SEED_N, SEED_BATCH, SEED_WORKERS].some((v) => isNaN(v) || v <= 0)) {
+  console.error("❌ Variables de entorno inválidas, revisa .env o la configuración");
+  process.exit(1);
+}
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
 
 console.log("🔄 Iniciando seeding completo...");

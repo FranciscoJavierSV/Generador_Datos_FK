@@ -82,6 +82,22 @@ function generarCliente(index, sucursal, empresa, listaPrecios) {
 }
 
 async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhost:27017" }) {
+  // convertir los parámetros a número para evitar cadenas o valores '***' en logs
+  start = Number(start);
+  end = Number(end);
+  batch = Number(batch);
+
+  // si el usuario pasó valores extraños, fallar rápido
+  if (isNaN(start) || isNaN(end) || isNaN(batch) || batch <= 0) {
+    throw new Error(`Parámetros inválidos start=${start} end=${end} batch=${batch}`);
+  }
+
+  // si no hay trabajo, salir sin tocar la BD
+  if (start >= end) {
+    if (parentPort) parentPort.postMessage({ status: "done" });
+    return;
+  }
+
   try {
     const client = new MongoClient(uri);
     await client.connect();
@@ -119,6 +135,9 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
       if (docs.length > 0) {
         await collection.insertMany(docs);
         console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
+      } else {
+        // se debería dar muy raramente, pero si ocurre lo registramos
+        console.log(`[Clientes] Saltando lote vacío (${i} - ${Math.min(i+batch,end)})`);
       }
     }
 
