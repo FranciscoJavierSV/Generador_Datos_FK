@@ -10,12 +10,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Show commit
+        run: git log -1 --oneline
+
       - name: Build Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
           push: false
           tags: base-dr-seeder:latest
+          no-cache: true
 
       - name: Inspect built image
         run: |
