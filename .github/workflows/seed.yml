@@ -20,6 +20,8 @@ jobs:
           push: false
           tags: base-dr-seeder:latest
           no-cache: true
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
 
       - name: Inspect built image
         run: |
