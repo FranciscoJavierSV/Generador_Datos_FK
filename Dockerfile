@@ -3,6 +3,10 @@
 # but eliminates handshake errors with MongoDB Atlas.
 FROM node:20-slim
 
+# allow build to inject commit hash for debugging
+ARG GIT_COMMIT=unspecified
+ENV GIT_COMMIT=$GIT_COMMIT
+
 # Debian images already include certificates and openssl, so no extra
 # installation is required here. If you need additional packages you can
 # add them with apt-get in future.

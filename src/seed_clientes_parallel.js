@@ -1,3 +1,6 @@
+// log version info as early as possible
+console.log(`📦 Seed script starting (GIT_COMMIT=${process.env.GIT_COMMIT || 'none'})`);
+
 const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
