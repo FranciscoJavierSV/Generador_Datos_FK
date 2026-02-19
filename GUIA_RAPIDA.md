@@ -71,7 +71,7 @@ npm run seed:variaciones   # Variaciones dinámicas
 ```
 500,000 documentos
 ├─ Nombre del producto
-├─ tieneVariaciones: true (60%) o false (40%)  ⭐ IMPORTANTE
+├─ tieneVariaciones: true (60%) o false (40%)
 ├─ Precios y costos realistas
 ├─ Referencia a: Empresa, Sucursal, Moneda, Usuario
 └─ Datos validados

@@ -4,7 +4,7 @@
 ║              Seeding Database MongoDB - Datos Coherentes y Reales          ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
-## 🎯 OBJETIVO: CUMPLIDO ✓
+## OBJETIVO: CUMPLIDO ✓
 
 El usuario pidió:
   1. ✅ Revisar proyecto en Docker
@@ -88,7 +88,7 @@ nombre: `${producto.nombre} - ${variante}` // "Block de Cemento - Rojo"
 
 ---
 
-## 📈 ESTADÍSTICAS FINALES
+## ESTADÍSTICAS FINALES
 
 | Métrica | Valor |
 |---------|-------|
@@ -134,7 +134,7 @@ nombre: `${producto.nombre} - ${variante}` // "Block de Cemento - Rojo"
 
 ---
 
-## 🚀 FORMAS DE USAR
+## FORMAS DE USAR
 
 ### Opción 1: Docker Completo (RECOMENDADO)
 ```bash
@@ -161,34 +161,34 @@ SEED_N=100000 SEED_WORKERS=8 npm run seed
 
 ---
 
-## ✨ CARACTERÍSTICAS PRINCIPALES
+## CARACTERÍSTICAS PRINCIPALES
 
-### ✅ Coherencia
+### Coherencia
 - Variaciones siempre vinculadas a productos reales
 - Mismas empresas/sucursales reutilizadas
 - RFC generado coherentemente
 - Monedas consistentes
 
-### ✅ Realismo
+### Realismo
 - tieneVariaciones hace sentido (60% true)
 - Nombres relacionados entre tablas
 - Datos validados y coherentes
 - Estructura como entorno real
 
-### ✅ Rendimiento
+### Rendimiento
 - 4 workers paralelos
 - ~1M menos documentos que antes
 - Mejor uso de memoria
 - Proceso ordenado
 
-### ✅ Escalabilidad
+### Escalabilidad
 - Fácil modificar SEED_N
 - Fácil aumentar workers
 - Scripts independientes pero coordinados
 
 ---
 
-## 🧪 VALIDACIÓN
+## VALIDACIÓN
 
 ### Sintaxis
 ```bash
@@ -213,7 +213,7 @@ db.variaciones.countDocuments() // ~3,000,000 ✓
 
 ---
 
-## 📚 DOCUMENTACIÓN
+## DOCUMENTACIÓN
 
 Archivos de documentación creados/actualizado:
 
@@ -249,7 +249,7 @@ Archivos de documentación creados/actualizado:
 
 ---
 
-## 🎯 PRÓXIMOS PASOS
+## PRÓXIMOS PASOS
 
 1. **Ahora:** `docker-compose up --build` o `npm install && npm run seed`
 2. **Verificar:** `mongosh mongodb://localhost:27017`
@@ -263,7 +263,7 @@ Archivos de documentación creados/actualizado:
 
 ---
 
-## 📞 SOPORTE QUICK REFERENCE
+## SOPORTE QUICK REFERENCE
 
 | Problema | Solución |
 |----------|----------|

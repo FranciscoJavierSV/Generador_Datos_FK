@@ -1,0 +1,30 @@
+name: Seed MongoDB
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: false
+          tags: base-dr-seeder:latest
+
+      - name: Run seeder
+        run: |
+          docker run --rm \
+            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+            -e SEED_N="${{ secrets.SEED_N }}" \
+            -e SEED_N_CLIENTES="${{ secrets.SEED_N_CLIENTES }}" \
+            -e SEED_N_PRODUCTOS="${{ secrets.SEED_N_PRODUCTOS }}" \
+            -e SEED_N_FACTURAS="${{ secrets.SEED_N_FACTURAS }}" \
+            -e SEED_BATCH="${{ secrets.SEED_BATCH }}" \
+            -e SEED_WORKERS="${{ secrets.SEED_WORKERS }}" \
+            base-dr-seeder:latest
