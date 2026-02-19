@@ -14,8 +14,17 @@ Utiliza **worker threads** para procesar datos en paralelo, haciendo el seeding 
 > ⚠️ Se añadieron validaciones extra en los workers para impedir que se invoque
 > `insertMany` con un lote vacío (error MongoInvalidArgumentError). Si ves
 > ese mensaje en los logs significa que uno de los parámetros (`--n`,
-> `--batch` o las variables de entorno) no era numérico o era 0. La imagen se
-> reconstruye automáticamente al levantar el contenedor.
+> `--batch` o las variables de entorno) no era numérico o era 0.
+> 
+> Cada worker ahora también imprime sus parámetros al arrancar, algo como:
+> 
+> ```
+> [Clientes worker] Parámetros recibidos start=0 end=125000 batch=10000 uri=...
+> ```
+> 
+> Esto ayuda a comprobar en los logs de CI que se está ejecutando el código
+> actualizado y con los valores correctos.
+> La imagen se reconstruye automáticamente al levantar el contenedor.
 
 ---
 

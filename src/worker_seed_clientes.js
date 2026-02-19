@@ -87,6 +87,9 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
   end = Number(end);
   batch = Number(batch);
 
+  // registro diagnóstico para facilitar el debug en CI
+  console.log(`[Clientes worker] Parámetros recibidos start=${start} end=${end} batch=${batch} uri=${uri}`);
+
   // si el usuario pasó valores extraños, fallar rápido
   if (isNaN(start) || isNaN(end) || isNaN(batch) || batch <= 0) {
     throw new Error(`Parámetros inválidos start=${start} end=${end} batch=${batch}`);
@@ -137,7 +140,7 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
         console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
       } else {
         // se debería dar muy raramente, pero si ocurre lo registramos
-        console.log(`[Clientes] Saltando lote vacío (${i} - ${Math.min(i+batch,end)})`);
+        console.warn(`[Clientes] ⚠️ Saltando lote vacío (${i} - ${Math.min(i+batch,end)})`);
       }
     }
 
