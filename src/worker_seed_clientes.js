@@ -26,7 +26,7 @@ function generarCliente(index, sucursal, empresa, listaPrecios) {
   const nombreGenerado = faker.person.firstName();
   const apellidoPaterno = faker.person.lastName();
   const apellidoMaterno = faker.person.lastName();
-  
+
   return {
     _id: new ObjectId(),
     listaPrecios: {
@@ -81,7 +81,6 @@ function generarCliente(index, sucursal, empresa, listaPrecios) {
   };
 }
 
-
 async function run({ start, end, batch, uri }) {
   const client = new MongoClient(uri);
   await client.connect();
@@ -114,8 +113,12 @@ async function run({ start, end, batch, uri }) {
       const listaPrecios = faker.helpers.arrayElement(listasPreciosArray);
       docs.push(generarCliente(j, sucursal, empresa, listaPrecios));
     }
-    await collection.insertMany(docs);
-    console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
+
+    // ✅ Validación para evitar lotes vacíos
+    if (docs.length > 0) {
+      await collection.insertMany(docs);
+      console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
+    }
   }
 
   await client.close();
