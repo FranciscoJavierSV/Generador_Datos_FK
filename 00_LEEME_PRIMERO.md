@@ -141,23 +141,25 @@ nombre: `${producto.nombre} - ${variante}` // "Block de Cemento - Rojo"
 docker-compose up --build
 ```
 
-### Opción 2: Local Sin Docker
-```bash
-npm install
-npm run seed
+Todos los pasos se ejecutan dentro de contenedores; no es necesario
+instalar dependencias en el host. El `Dockerfile` ya incluye la ejecución
+`npm install` durante la build.
+
+### Opción 2: Suscribir servicios individualmente
+```
+# lanzar el stack Kafka + métricas
+docker-compose -f docker-compose.kafka.yml up --build
+
+# iniciar solo el seeder tradicional
+docker-compose up --build
+
+# ejecutar el producer desde el contenedor
+docker-compose run --rm consumer node src/kafka/producer.js
 ```
 
-### Opción 3: Por Partes
-```bash
-npm run seed:clientes      # 500k
-npm run seed:productos     # 500k
-npm run seed:variaciones   # Dinámico
-```
-
-### Opción 4: Personalizado
-```bash
-SEED_N=100000 SEED_WORKERS=8 npm run seed
-```
+Si prefieres correr scripts aislados puedes emplear `docker-compose run` con
+la imagen del repositorio; el binario `node` y las dependencias ya están
+dentro de la imagen.
 
 ---
 
@@ -240,10 +242,10 @@ Archivos de documentación creados/actualizado:
 ## 🎁 BONUS
 
 ✅ Validación de sintaxis incluida
-✅ Scripts npm flexibles
+✅ Scripts flexibles y contenedorizados
 ✅ Manejo de errores mejorado
 ✅ Logs detallados durante ejecución
-✅ Compatible con Docker y local
+✅ Totalmente Docker-friendly (no requiere instalación local)
 ✅ Documentación completa
 ✅ Testing utilities incluidas
 
@@ -251,7 +253,7 @@ Archivos de documentación creados/actualizado:
 
 ## PRÓXIMOS PASOS
 
-1. **Ahora:** `docker-compose up --build` o `npm install && npm run seed`
+1. **Ahora:** `docker-compose up --build` (o usa el stack Kafka con métricas)
 2. **Verificar:** `mongosh mongodb://localhost:27017`
 3. **Validar:**
    ```javascript
@@ -268,7 +270,7 @@ Archivos de documentación creados/actualizado:
 | Problema | Solución |
 |----------|----------|
 | MongoDB no disponible | `docker run -d -p 27017:27017 mongo:8.0` |
-| npm modules missing | `npm install` |
+| npm modules missing | Dependencias instaladas dentro de los contenedores |
 | Sintaxis error | `node -c src/seed_all.js` |
 | Ver logs | `docker logs seed_app` |
 | Limpiar BD | `db.clientes.deleteMany({})` |

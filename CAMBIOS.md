@@ -107,31 +107,20 @@ seed_all.js inicia
 ## 🧪 Pruebas del Proyecto
 
 ```bash
-# Construcción local sin Docker
-npm install
-MONGO_URI=mongodb://localhost:27017 npm run seed
+# Levanta todos los servicios, incluyendo Kafka y monitorización:
+docker-compose -f docker-compose.kafka.yml up --build
 
-# Construcción con Docker
+# O solo el seeder tradicional:
 docker-compose up --build
 
-# Solo clientes (500k)
-docker-compose run seed_app node src/seed_clientes_parallel.js
+# Ejecutar un script aislado (no se requiere npm en el host):
+docker-compose run --rm seed_app node src/seed_clientes_parallel.js
 
-# Conectarse a BD desde otra terminal
-mongosh mongodb://localhost:27017
+# Conectarse a la base de datos Atlas usando la URI en el .env:
+mongosh "$MONGO_URI"
 
-# Ver colecciones
-use test
-db.clientes.countDocuments()
-db.productos.countDocuments()
-db.variaciones.countDocuments()
-
-# Ver ejemplo
-db.clientes.findOne()
-db.productos.findOne()
-db.variaciones.findOne()
+# Ver colecciones y ejemplos de documentos como antes.
 ```
-
 ## 📈 Rendimiento Esperado
 
 Con las variables por defecto:

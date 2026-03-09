@@ -28,9 +28,9 @@ if ([SEED_N, SEED_BATCH, SEED_WORKERS].some((v) => isNaN(v) || v <= 0)) {
 }
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
 
-console.log("🔄 Iniciando seeding completo...");
-console.log(`📦 Running image built at commit ${process.env.GIT_COMMIT || 'unknown'}`);
-console.log(`📊 Configuración:`);
+console.log(" Iniciando seeding completo...");
+console.log(` Running image built at commit ${process.env.GIT_COMMIT || 'unknown'}`);
+console.log(` Configuración:`);
 console.log(`   - Total: ${SEED_N} registros`);
 console.log(`   - Batch: ${SEED_BATCH}`);
 console.log(`   - Workers: ${SEED_WORKERS}`);

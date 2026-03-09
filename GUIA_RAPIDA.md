@@ -17,42 +17,51 @@ El proyecto ahora genera datos **coherentes y realistas**:
 # 1. Ir al directorio
 cd ..../baseDR
 
-# 2. Construir y ejecutar
+# 2. Ajusta tu `.env` para que MONGO_URI apunte a Atlas
+#    por ejemplo: mongodb+srv://usuario:password@cluster0.abcd.mongodb.net/test
+
+# 3. Construir y ejecutar
 docker-compose up --build
 
-# En otra terminal, verificar progreso:
-mongosh mongodb://localhost:27017
+# En otra terminal, verificar progreso (reemplaza la URI según tu Atlas):
+mongosh "$MONGO_URI"
 use test
 db.clientes.countDocuments()
 db.productos.countDocuments()
 db.variaciones.countDocuments()
 ```
-
 **Tiempo estimado:** 3-5 minutos
 
 ---
 
-## 💻 Forma LOCAL: Sin Docker
+## 💻 Ejecución alternativa (solo contenedores)
+
+Toda la aplicación puede correr dentro de Docker; no es necesario instalar
+nada más que Docker y Docker Compose en el host. El siguiente ejemplo
+arranca los servicios de Kafka/Zookeeper, consumer, Prometheus y Grafana:
 
 ```bash
-# 1. Instalar dependencias
-cd /home/javi/baseDR
-npm install
-
-# 2. Asegúrate que MongoDB está corriendo
-# Opción A: MongoDB local
-mongosh
-# Opción B: MongoDB en Docker
-docker run -d -p 27017:27017 mongo:8.0
-
-# 3. Ejecutar seeding completo
-npm run seed
-
-# O por partes:
-npm run seed:clientes      # 500k clientes
-npm run seed:productos     # 500k productos
-npm run seed:variaciones   # Variaciones dinámicas
+# construye la imagen y levanta el stack completo
+docker-compose -f docker-compose.kafka.yml up --build
 ```
+
+Si únicamente quieres ejecutar el seeder original (sin Kafka) puedes usar
+el compose normal:
+
+```bash
+# mongo + seed_app
+docker-compose up --build
+```
+
+Para lanzar el producer puedes ejecutarlo desde un contenedor: 
+
+```bash
+# el binario `node` se toma de la imagen construida del repo
+docker-compose run --rm consumer node src/kafka/producer.js
+```
+
+De esta manera no tendrás que ejecutar ningún `npm` o `node` localmente; los
+comandos se producen dentro de los contenedores.
 
 ---
 
@@ -93,7 +102,7 @@ npm run seed:variaciones   # Variaciones dinámicas
 
 ```javascript
 // En mongosh
-mongosh mongodb://localhost:27017
+mongosh "$MONGO_URI"
 use test
 
 // Ver conteos (esperado: todos > 0)
@@ -120,11 +129,8 @@ variaciones.forEach(v => console.log(`  - ${v.nombre}`))
 
 ### Generar MENOS datos
 ```bash
-# 100k clientes y productos
+# 100k clientes y productos (contenedores)
 SEED_N=100000 docker-compose up --build
-
-# O localmente
-SEED_N=100000 SEED_WORKERS=2 npm run seed
 ```
 
 ### Generar MÁS workers
@@ -156,8 +162,7 @@ db.variaciones.deleteMany({})
 
 ## 🎯 Próximos Pasos
 
-1. **Local:** `npm install && npm run seed`
-2. **Docker:** `docker-compose up --build`
+1. **Docker:** `docker-compose up --build` (o usa stack Kafka para monitoreo)
 3. **Verificar:** `mongosh mongodb://localhost:27017`
 4. **Validar:** Ver conteos y ejemplos
 5. **Usar datos:** Los 500k clientes y 500k productos están listos
@@ -185,8 +190,8 @@ db.variaciones.deleteMany({})
 # MongoDB no disponible
 docker run -d -p 27017:27017 mongo:8.0
 
-# npm modules falta
-npm install
+# Dependencias son gestionadas dentro de los contenedores
+# reconstruye si algo falta: docker-compose build
 
 # Sintaxis error
 node -c src/seed_all.js

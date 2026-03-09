@@ -43,10 +43,10 @@ echo "  • Dockerfile: Actualizado (CMD -> seed_all.js)"
 echo "  • package.json: Actualizado (scripts + sin type:module)"
 echo ""
 
-echo "🧪 Para probar localmente:"
-echo "  npm install"
-echo "  # Asegúrate que MongoDB esté corriendo"
-echo "  npm run seed"
+echo "🧪 Para probar localmente (todo en contenedores):"
+echo "  # basta con tener Docker/Compose instalado"
+echo "  docker-compose up --build"  # levanta mongo+seed_app
+
 echo ""
 
 echo "🐳 Para probar con Docker:"

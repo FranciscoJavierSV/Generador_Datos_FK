@@ -184,29 +184,23 @@ DESPUÉS:
 
 ## 🚀 FORMAS DE USAR
 
-### Local (Sin Docker)
-```bash
-npm install
-MONGO_URI=mongodb://localhost:27017 npm run seed
+### Docker (único requisito)
+```
+docker-compose up --build                 # seeder tradicional
+
+docker-compose -f docker-compose.kafka.yml up --build   # Kafka + monitor
 ```
 
-### Docker Completo
-```bash
-docker-compose up --build
+El entorno completo está contenido en los contenedores; los comandos `npm`
+y `node` se ejecutan allí, no en el host.
+
+### Ejecución aislada
+```
+docker-compose run --rm seed_app node src/seed_productos_parallel.js
 ```
 
-### Por Partes
-```bash
-npm run seed:clientes
-npm run seed:productos
-npm run seed:variaciones
-```
-
-### Personalizado
-```bash
-node src/seed_clientes_parallel.js --n 100000 --workers 2
-node src/seed_productos_parallel.js --n 100000 --workers 4
-```
+También puedes personalizar argumentos de los scripts usando el mismo
+mecanismo de `run`.
 
 ---
 

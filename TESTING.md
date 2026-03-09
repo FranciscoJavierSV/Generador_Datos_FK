@@ -12,46 +12,48 @@ node -c src/worker_seed_variaciones.js
 ```
 
 ### 2. Dependencias
-```bash
-npm install
-npm list
-```
-
+Los contenedores construidos a partir del `Dockerfile` instalan las
+dependencias necesarias (`npm install` se ejecuta durante la build). No es
+necesario ejecutar estos comandos en el host.
 ### 3. MongoDB Disponible
-```bash
-# Inicia MongoDB (Docker)
-docker run -d -p 27017:27017 --name mongo mongo:8.0
+Asegúrate de que `MONGO_URI` apunta a tu clúster de Atlas y que las
+credenciales son válidas.
 
+```bash
 # Verifica conectividad
-mongosh mongodb://localhost:27017
-> db.adminCommand('ping')
+mongosh "$MONGO_URI" \
+  --eval "db.adminCommand('ping')"
 # Esperado: { ok: 1 }
 ```
 
-## 🚀 Ejecución (solo Docker)
+## 🚀 Ejecución únicamente con contenedores
 
-# Contar clientes y productos por separado
-Puedes pasar `SEED_N_CLIENTES` y `SEED_N_PRODUCTOS` en el `.env` o en la
-línea de arranque si quieres generar cantidades distintas. Por ejemplo:
+Todos los procesos deben ejecutarse dentro de Docker. El `Dockerfile` y
+los `docker-compose` existentes ya se encargan de instalar dependencias
+(incluyendo `npm`).
+
+Para correr el seeding tradicional, por ejemplo:
 
 ```bash
-# 100k clientes y 300k productos
-SEED_N_CLIENTES=100000 SEED_N_PRODUCTOS=300000 \
-  docker-compose up --build
+docker-compose up --build
 ```
 
-
-Los scripts están diseñados para ejecutarse desde un contenedor. Cualquier
-invocación directa a `node` terminará con un mensaje de error. Usa los comandos
-siguientes para pruebas rápidas.
+Si necesitas ejecutar un solo script dentro del contenedor puedes usar
+`run`:
 
 ```bash
-# iniciar con configuración del entorno definido en .env
-docker-compose up --build
-
-# ejecutar un solo proceso dentro del servicio de seeding
 docker-compose run --rm seed_app node src/seed_clientes_parallel.js
 ```
+
+Cuando uses el pipeline Kafka, ejecuta el compose correspondiente:
+
+```bash
+docker-compose -f docker-compose.kafka.yml up --build
+```
+
+El producer/consumer se levantan como servicios (`consumer` ya está
+definido); el producer también puede lanzarse manualmente con
+`docker-compose run --rm consumer node src/kafka/producer.js`.
 
 ## 🐳 Ejecución con Docker
 
@@ -64,10 +66,13 @@ docker build -t basedр:latest .
 ### Ejecución
 ```bash
 # Con docker-compose (recomendado)
+# asegúrate de que el .env contiene la URI de Atlas
+
 docker-compose up --build
 
-# O solo el contenedor de seeding
-docker run --network host -e MONGO_URI=mongodb://localhost:27017 basedр:latest
+# O bien el stack Kafka con métricas
+
+docker-compose -f docker-compose.kafka.yml up --build
 ```
 
 ## 📊 Validación de Datos
@@ -179,9 +184,9 @@ db.productos.distinct("_idMoneda")
 
 ## ⚠️ Troubleshooting
 
-### Problema: "ECONNREFUSED - MongoDB no disponible"
+### Problema: "ECONNREFUSED / error de conexión a Atlas"
 ```bash
-# Solución: Inicia MongoDB
+# Solución: Revisa `MONGO_URI` y la red a Atlas
 docker run -d -p 27017:27017 mongo:8.0
 
 # O usa docker-compose
@@ -189,11 +194,10 @@ docker-compose up mongo
 ```
 
 ### Problema: "Cannot find module 'minimist'"
+Se produce si el contenedor no se ha reconstruido. Vuelve a levantarlo:
 ```bash
-# Solución:
-npm install
+docker-compose build
 ```
-
 ### Problema: "SyntaxError: Unexpected token"
 ```bash
 # Verifica que package.json NO tenga "type": "module"
@@ -224,14 +228,14 @@ db.variaciones.deleteMany({})
 ## 📈 Performance Benchmarking
 
 ### Medir tiempo total
+Puedes usar el tiempo que tarda el contenedor en ejecutar el comando:
 ```bash
-time npm run seed
+time docker-compose run --rm seed_app node src/seed_all.js
 ```
-
 ### Monitorear durante ejecución
 ```bash
 # En otra terminal
-watch -n 1 'mongosh mongodb://localhost:27017 --eval "
+watch -n 1 'mongosh "$MONGO_URI" --eval "
   use test;
   print(\"Clientes: \" + db.clientes.countDocuments());
   print(\"Productos: \" + db.productos.countDocuments());
@@ -242,7 +246,7 @@ watch -n 1 'mongosh mongodb://localhost:27017 --eval "
 ## ✅ Checklist Final
 
 - [ ] MongoDB está corriendo
-- [ ] npm install completado
+- [ ] contenedores construidos correctamente
 - [ ] Sintaxis validada (node -c)
 - [ ] Base de datos está vacía (o limpiada)
 - [ ] Variables de entorno correctas

@@ -13,6 +13,13 @@ jobs:
       - name: Show commit
         run: git log -1 --oneline
 
+      - name: Start Kafka & Zookeeper
+        run: |
+          docker-compose -f docker-compose.kafka.yml up -d
+          # wait for broker to be ready
+          timeout 60 bash -c 'until nc -z localhost 9092; do sleep 1; done'
+
+
       - name: Build Docker image
         uses: docker/build-push-action@v3
         with:
@@ -41,3 +48,15 @@ jobs:
             -e SEED_BATCH="${{ secrets.SEED_BATCH }}" \
             -e SEED_WORKERS="${{ secrets.SEED_WORKERS }}" \
             base-dr-seeder:latest
+
+      - name: Smoke-test Kafka producers/consumers
+        env:
+          KAFKA_BROKERS: localhost:9092
+          KAFKA_TOPIC: productos
+          KAFKA_GROUP_ID: ci-group
+          MONGO_URI: "${{ secrets.MONGO_URI }}"
+        run: |
+          # start consumer first; it will exit after MAX_MESSAGES
+          MAX_MESSAGES=50 node src/kafka/consumer.js &
+          sleep 2
+          MAX_MESSAGES=50 node src/kafka/producer.js
