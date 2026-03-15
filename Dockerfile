@@ -19,4 +19,4 @@ RUN npm install --omit=dev
 
 COPY src ./src
 
-CMD ["node", "src/seed_all.js"]
+CMD ["node", "src/seeders/seed_all.js"]
