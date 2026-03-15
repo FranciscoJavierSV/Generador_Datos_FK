@@ -28,8 +28,10 @@ jobs:
       - name: Start Kafka, Zookeeper, Mongo
         run: |
           docker compose -f docker-compose.yml up -d zookeeper kafka mongo
-          timeout 120 bash -c 'until docker compose exec mongo mongo --eval "db.adminCommand(\"ping\")" >/dev/null 2>&1; do sleep 2; done'
-          timeout 120 bash -c 'until docker compose exec kafka bash -c "kafka-topics --bootstrap-server kafka:9092 --list" >/dev/null 2>&1; do sleep 2; done'
+          echo "Esperando servicio mongo..."
+          timeout 180 bash -c 'until docker compose exec mongo mongo --eval "db.adminCommand(\"ping\")" >/dev/null 2>&1; do sleep 3; done'
+          echo "Esperando servicio kafka..."
+          timeout 180 bash -c 'until docker compose exec kafka bash -lc "kafka-topics --bootstrap-server kafka:9092 --list 2>/dev/null" >/dev/null 2>&1; do sleep 3; done'
 
       - name: Run seeder as Compose service
         run: |
