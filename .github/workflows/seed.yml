@@ -31,27 +31,9 @@ jobs:
           timeout 120 bash -c 'until docker compose exec mongo mongo --eval "db.adminCommand(\"ping\")" >/dev/null 2>&1; do sleep 2; done'
           timeout 120 bash -c 'until docker compose exec kafka bash -c "kafka-topics --bootstrap-server kafka:9092 --list" >/dev/null 2>&1; do sleep 2; done'
 
-      - name: Build Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          push: false
-          tags: base-dr-seeder:latest
-          no-cache: true
-          build-args: |
-            GIT_COMMIT=${{ github.sha }}
-
-      - name: Run seeder via Docker Compose
+      - name: Run seeder as Compose service
         run: |
-          docker compose -f docker-compose.yml run --rm \
-            -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-            -e SEED_N="${{ secrets.SEED_N }}" \
-            -e SEED_N_CLIENTES="${{ secrets.SEED_N_CLIENTES }}" \
-            -e SEED_N_PRODUCTOS="${{ secrets.SEED_N_PRODUCTOS }}" \
-            -e SEED_N_FACTURAS="${{ secrets.SEED_N_FACTURAS }}" \
-            -e SEED_BATCH="${{ secrets.SEED_BATCH }}" \
-            -e SEED_WORKERS="${{ secrets.SEED_WORKERS }}" \
-            seed_app node src/seeders/seed_all.js
+          docker compose -f docker-compose.yml up --build --exit-code-from seed_app --abort-on-container-exit seed_app
 
       - name: Optional smoke test skipped
         run: |
