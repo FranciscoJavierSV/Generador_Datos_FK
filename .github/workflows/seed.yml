@@ -37,21 +37,27 @@ jobs:
         run: |
           docker compose -f docker-compose.yml run --rm seed_app node src/seeders/seed_all.js
 
-      - name: Start consumer for Kagka metrics
+      - name: Start consumer for Kafka metrics
         run: |
           docker compose -f docker-compose.yml up -d consumer
           sleep 10
 
-      - name: Show consumer metrics from /metrics
+      - name: Run producer to generate messages for consumer
+        run: |
+          docker compose -f docker-compose.yml run --rm producer
+          sleep 10
+
+      - name: Show consumer Prometheus metrics
         run: |
           echo "--- Consumer Prometheus metrics ---"
-          curl -s http://localhost:9464/metrics | grep -E 'consumer_messages_total|consumer_errors_total|consumer_latency_ms' || true
+          curl -s http://localhost:9464/metrics | grep -E 'consumer_messages_total|consumer_errors_total|consumer_latency_ms|process_cpu_user_seconds_total|process_resident_memory_bytes' || true
           echo "--- Consumer logs summary ---"
-          docker compose -f docker-compose.yml logs --tail=50 consumer
+          docker compose -f docker-compose.yml logs --tail=100 consumer
 
-      - name: Show final Mongo counts
+      - name: Show final Mongo counts from MONGO_URI
         run: |
-          docker compose -f docker-compose.yml exec mongo mongosh --quiet --eval "const db=connect('mongodb://localhost:27017/test'); print('clientes', db.clientes.countDocuments()); print('productos', db.productos.countDocuments()); print('variaciones', db.variaciones.countDocuments()); print('facturas', db.facturas.countDocuments()); print('datosfactura', db.datosfactura.countDocuments());"
+          echo "--- Mongo counts from ${MONGO_URI} ---"
+          docker run --rm mongo:6.0 mongosh "${{ secrets.MONGO_URI }}" --quiet --eval "const db = db.getSiblingDB('test'); print('clientes', db.clientes.countDocuments()); print('productos', db.productos.countDocuments()); print('variaciones', db.variaciones.countDocuments()); print('facturas', db.facturas.countDocuments()); print('datosfactura', db.datosfactura.countDocuments());"
 
       - name: Shutdown compose
         run: |
