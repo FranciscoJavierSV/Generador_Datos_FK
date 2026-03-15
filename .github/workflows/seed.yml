@@ -35,9 +35,25 @@ jobs:
 
       - name: Run seeder as Compose service
         run: |
-          docker compose -f docker-compose.yml up --build --exit-code-from seed_app --abort-on-container-exit seed_app
+          docker compose -f docker-compose.yml run --rm seed_app node src/seeders/seed_all.js
 
-      - name: Optional smoke test skipped
+      - name: Start consumer for Kagka metrics
         run: |
-          echo "Smoke test disabled in CI, seeding completed in previous step."
+          docker compose -f docker-compose.yml up -d consumer
+          sleep 10
+
+      - name: Show consumer metrics from /metrics
+        run: |
+          echo "--- Consumer Prometheus metrics ---"
+          curl -s http://localhost:9464/metrics | grep -E 'consumer_messages_total|consumer_errors_total|consumer_latency_ms' || true
+          echo "--- Consumer logs summary ---"
+          docker compose -f docker-compose.yml logs --tail=50 consumer
+
+      - name: Show final Mongo counts
+        run: |
+          docker compose -f docker-compose.yml exec mongo mongosh --quiet --eval "const db=connect('mongodb://localhost:27017/test'); print('clientes', db.clientes.countDocuments()); print('productos', db.productos.countDocuments()); print('variaciones', db.variaciones.countDocuments()); print('facturas', db.facturas.countDocuments()); print('datosfactura', db.datosfactura.countDocuments());"
+
+      - name: Shutdown compose
+        run: |
+          docker compose -f docker-compose.yml down
 

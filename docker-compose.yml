@@ -51,3 +51,21 @@ services:
       - mongo
     restart: "no"
 
+  consumer:
+    build: .
+    env_file: .env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
+      - METRICS_PORT=9464
+      - MAX_MESSAGES=10000
+    command: ["node", "src/kafka/consumer.js"]
+    ports:
+      - "9464:9464"
+    depends_on:
+      - kafka
+      - mongo
+    restart: "no"
+
