@@ -39,7 +39,8 @@ function generarVariacion(producto, index, listaPrecios) {
         _id: new ObjectId(),
         fechaRegistro: faker.date.past(),
         activo: true,
-        precio: faker.number.float({ min: 10, max: producto.precio && producto.precio > 0  ? producto.precio * 1.2  : 500, precision: 0.01}),
+        precio: faker.number.float({ min: 10, max: Math.max((producto.precio || 500) * 1.2, 11), precision: 0.01 }),
+
         _idListaPrecios: listaPrecios._id
       }
     ],
