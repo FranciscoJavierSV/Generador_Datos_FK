@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   zookeeper:
-    image: bitnami/zookeeper:3.8
+    image: bitnami/zookeeper:3.8.1
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - '2181:2181'
 
   kafka:
-    image: bitnami/kafka:3.5
+    image: bitnami/kafka:3.5.1
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
