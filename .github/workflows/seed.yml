@@ -62,13 +62,10 @@ jobs:
             base-dr-seeder:latest
 
       - name: Smoke-test Kafka producers/consumers
-        env:
-          KAFKA_BROKERS: localhost:9092
-          KAFKA_TOPIC: productos
-          KAFKA_GROUP_ID: ci-group
-          MONGO_URI: "${{ secrets.MONGO_URI }}"
         run: |
-          # start consumer first; it will exit after MAX_MESSAGES
-          MAX_MESSAGES=50 node src/kafka/consumer.js &
+          # start consumer first (background) and exit after MAX_MESSAGES
+          docker run --rm -e KAFKA_BROKERS=localhost:9092 -e KAFKA_TOPIC=productos -e KAFKA_GROUP_ID=ci-group -e MONGO_URI="${{ secrets.MONGO_URI }}" -e MAX_MESSAGES=50 -d --name smoke-consumer base-dr-seeder:latest node src/kafka/consumer.js
           sleep 2
-          MAX_MESSAGES=50 node src/kafka/producer.js
+          docker run --rm -e KAFKA_BROKERS=localhost:9092 -e KAFKA_TOPIC=productos base-dr-seeder:latest node src/kafka/producer.js
+          docker logs smoke-consumer || true
+          docker rm -f smoke-consumer || true
