@@ -13,6 +13,18 @@ jobs:
       - name: Show commit
         run: git log -1 --oneline
 
+      - name: Create .env for Docker Compose
+        run: |
+          cat > .env <<'EOF'
+          MONGO_URI=${{ secrets.MONGO_URI }}
+          SEED_N=${{ secrets.SEED_N }}
+          SEED_BATCH=${{ secrets.SEED_BATCH }}
+          SEED_WORKERS=${{ secrets.SEED_WORKERS }}
+          KAFKA_BROKERS=localhost:9092
+          KAFKA_TOPIC=productos
+          KAFKA_GROUP_ID=mongo-inserter
+          EOF
+
       - name: Start Kafka & Zookeeper
         run: |
           docker compose -f docker-compose.yml up -d
