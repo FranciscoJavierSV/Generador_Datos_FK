@@ -51,6 +51,18 @@ services:
       - mongo
     restart: "no"
 
+  producer:
+    build: .
+    env_file: .env
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - MAX_MESSAGES=1000
+    command: ["node", "src/kafka/producer.js"]
+    depends_on:
+      - kafka
+    restart: "no"
+
   consumer:
     build: .
     env_file: .env
@@ -60,7 +72,7 @@ services:
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
       - METRICS_PORT=9464
-      - MAX_MESSAGES=10000
+      - MAX_MESSAGES=1000
     command: ["node", "src/kafka/consumer.js"]
     ports:
       - "9464:9464"
