@@ -73,25 +73,25 @@ function runScript(scriptPath, name, extraEnv = {}) {
 async function main() {
   try {
     // 1. Generar clientes
-    await runScript("./src/seed_clientes_parallel.js", "Generando clientes", {
+    await runScript("./src/seeders/seed_clientes_parallel.js", "Generando clientes", {
       SEED_N: SEED_N_CLIENTES
     });
 
     // 2. Generar productos
-    await runScript("./src/seed_productos_parallel.js", "Generando productos", {
+    await runScript("./src/seeders/seed_productos_parallel.js", "Generando productos", {
       SEED_N: SEED_N_PRODUCTOS
     });
 
     // 3. Generar variaciones (basadas en productos)
-    await runScript("./src/seed_variaciones_parallel.js", "Generando variaciones");
+    await runScript("./src/seeders/seed_variaciones_parallel.js", "Generando variaciones");
 
     // 4. Generar facturas
-    await runScript("./src/seed_facturas_parallel.js", "Generando facturas", {
+    await runScript("./src/seeders/seed_facturas_parallel.js", "Generando facturas", {
       SEED_N: SEED_N_FACTURAS
     });
 
     // 5. Generar datos de factura (líneas) basados en las facturas creadas
-    await runScript("./src/seed_datosfacturas_parallel.js", "Generando datos de factura");
+    await runScript("./src/seeders/seed_datosfacturas_parallel.js", "Generando datos de factura");
 
     console.log("\n✅ 🎉 ¡Seeding completado con éxito!");
     process.exit(0);

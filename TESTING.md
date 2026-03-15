@@ -32,17 +32,23 @@ Todos los procesos deben ejecutarse dentro de Docker. El `Dockerfile` y
 los `docker-compose` existentes ya se encargan de instalar dependencias
 (incluyendo `npm`).
 
-Para correr el seeding tradicional, por ejemplo:
+Para correr el seeding tradicional con Kafka y sin ningún servicio de
+Mongo local:
 
 ```bash
 docker-compose up --build
+```
+Si deseas forzar un Mongo local también, utiliza el profile correspondiente:
+
+```bash
+docker-compose --profile withmongo up --build
 ```
 
 Si necesitas ejecutar un solo script dentro del contenedor puedes usar
 `run`:
 
 ```bash
-docker-compose run --rm seed_app node src/seed_clientes_parallel.js
+docker-compose run --rm seed_app node src/seeders/seed_clientes_parallel.js
 ```
 
 Cuando uses el pipeline Kafka, ejecuta el compose correspondiente:

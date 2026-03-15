@@ -13,4 +13,4 @@ const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";
 console.log(`📌 Seeding Variaciones: generando según tieneVariaciones`);
 
 // Las variaciones se generan basadas en productos que existen, así que no necesita start/end
-require("./worker_seed_variaciones").run({ start: 0, end: undefined, batch, uri });
+require("../workers/worker_seed_variaciones").run({ start: 0, end: undefined, batch, uri });

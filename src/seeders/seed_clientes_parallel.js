@@ -52,7 +52,7 @@ async function runWorkers() {
       const end = Math.min(start + perWorker, total);
 
       promises.push(new Promise((resolve, reject) => {
-        const w = new Worker("./src/worker_seed_clientes.js", {
+        const w = new Worker("./src/workers/worker_seed_clientes.js", {
           workerData: { start, end, batch, uri }
         });
 
@@ -76,7 +76,7 @@ async function runWorkers() {
   } else {
     // single-threaded: ejecutar la función exportada y propagar errores
     try {
-      await require("./worker_seed_clientes").run({ start: 0, end: total, batch, uri });
+      await require("../workers/worker_seed_clientes").run({ start: 0, end: total, batch, uri });
       console.log("✅ Seed clientes single-threaded completado");
     } catch (err) {
       throw err;

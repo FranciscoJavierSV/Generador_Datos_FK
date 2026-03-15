@@ -11,4 +11,4 @@ const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";
 
 console.log(`📌 Seeding DatosFactura: basado en facturas existentes`);
 
-require("./worker_seed_datosfacturas").run({ batch, uri });
+require("../workers/worker_seed_datosfacturas").run({ batch, uri });

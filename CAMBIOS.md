@@ -6,6 +6,13 @@ Se han realizado cambios estructurales para asegurar que la génération de dato
 
 ## ✅ Cambios Implementados
 
+### 0. **Reorganización de directorios**
+- Los scripts "maestros" (seed_*.js y seed_all.js) se han movido a `src/seeders/`.
+- Los archivos que ejecutan worker threads ahora residen en `src/workers/`.
+- Todos los `require`/`Worker` paths y la documentación han sido ajustados.
+
+
+
 ### 1. **worker_seed_clientes.js**
 - ✍️ Actualizado para usar referencias constantes y coherentes
 - Sucursales, empresas, y listas de precios ficticias pero reales

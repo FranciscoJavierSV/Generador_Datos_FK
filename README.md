@@ -41,12 +41,21 @@ cd baseDR
 
 # 2. Ejecutar con Docker
 #    El contenedor de seeding comprueba que corre dentro de Docker y
+cd baseDR
+
+# 2. Ejecutar con Docker
+#    El contenedor de seeding comprueba que corre dentro de Docker y
 #    terminará si se invoca directamente desde Node.
-docker-compose up --build
+#    El único compose en el repo ahora incluye Kafka/Zookeeper y el
+#    servicio seed_app; no hay ningún Mongo local.
 
-# 3. MongoDB estará disponible en: mongodb://localhost:27017
+
+docker-compose up --build            # arranca seed_app + Kafka/Zookeeper
+
+# 3. (opcional) Si ejecutas un Mongo local aparte (no desde este compose),
+#    estará disponible en mongodb://localhost:27017
+
 ```
-
 ---
 
 ## ⚙️ Configuración
@@ -152,12 +161,20 @@ baseDR/
 ├── .env.example            # Plantilla de variables
 ├── README.md               # Este archivo
 └── src/
-    ├── seed_clientes_parallel.js         # Maestro de clientes
-    ├── seed_productos_parallel.js        # Maestro de productos
-    ├── seed_variaciones_parallel.js      # Maestro de variaciones
-    ├── worker_seed_clientes.js           # Worker de clientes
-    ├── worker_seed_productos.js          # Worker de productos
-    └── worker_seed_variaciones.js        # Worker de variaciones
+    ├── kafka/                        # producer/consumer Kafka
+    ├── seeders/                      # scripts maestros (clientes, productos, etc.)
+    │   ├── seed_all.js
+    │   ├── seed_clientes_parallel.js
+    │   ├── seed_productos_parallel.js
+    │   ├── seed_variaciones_parallel.js
+    │   ├── seed_facturas_parallel.js
+    │   └── seed_datosfacturas_parallel.js
+    └── workers/                      # código que ejecutan los workers
+        ├── worker_seed_clientes.js
+        ├── worker_seed_productos.js
+        ├── worker_seed_variaciones.js
+        ├── worker_seed_facturas.js
+        └── worker_seed_datosfacturas.js
 ```
 
 ---
@@ -167,21 +184,21 @@ baseDR/
 ### Generar solo clientes
 ```bash
 # usa --n o SEED_N_CLIENTES para especificar la cantidad
-docker-compose run seed_app node src/seed_clientes_parallel.js --n 100000
+docker-compose run seed_app node src/seeders/seed_clientes_parallel.js --n 100000
 ```
 ### Generar facturas y datos de factura
 ```bash
 # facturas tomará clientes ya existentes
-docker-compose run seed_app node src/seed_facturas_parallel.js --n 50000
+docker-compose run seed_app node src/seeders/seed_facturas_parallel.js --n 50000
 # después puedes generar los detalles:
-docker-compose run seed_app node src/seed_datosfacturas_parallel.js
+docker-compose run seed_app node src/seeders/seed_datosfacturas_parallel.js
 ```
 ### Generar con parámetros personalizados
 ```bash
 # cualquier maestro acepta --n, --batch, --workers y --uri
 # (productos puede leer --n de SEED_N_PRODUCTOS si está en .env)
 
-docker-compose run seed_app node src/seed_clientes_parallel.js --n 1000000 --workers 8
+docker-compose run seed_app node src/seeders/seed_clientes_parallel.js --n 1000000 --workers 8
 ```
 
 ### Conectarse a la BD desde otra terminal
@@ -239,13 +256,12 @@ docker logs -f seed_app
   "activo": true,
   "porcentajeIva": 16,
   "tieneVariaciones": true,
-  "_idMoneda": ObjectId,      // Comparte valor con _idMonedaCosto
+  "_idMoneda": ObjectId,
   "_idMonedaCosto": ObjectId,
   "_idEmpresa": ObjectId,
   "_idSucursal": ObjectId,
   "_idUsuario": ObjectId,
-  "_idAccesoUsuario": ObjectId // Comparte valor con _idUsuario
-  // ... más campos
+  "_idAccesoUsuario": ObjectId
 }
 ```
 
@@ -270,7 +286,6 @@ docker logs -f seed_app
   "uuid": String,
   "version": "3.3",
   "activo": true
-  // campos SAT, pagos, etc. se generan aleatoriamente
 }
 ```
 
@@ -291,7 +306,6 @@ docker logs -f seed_app
   "descuento": Number,
   "id": Number,
   "_idEmpresa": ObjectId
-  // hereda algunas referencias de la factura padre
 }
 ```
 
@@ -300,7 +314,7 @@ docker logs -f seed_app
 ```javascript
 {
   "_id": ObjectId,
-  "_idProducto": ObjectId,    // Referencia al producto padre
+  "_idProducto": ObjectId,
   "nombre": "Block de Cemento",
   "precios": [
     {
@@ -313,16 +327,14 @@ docker logs -f seed_app
   "tieneColores": false,
   "colores": [],
   "imagenes": [],
-  "_idEmpresa": ObjectId,      // Hereda del producto
-  "_idSucursal": ObjectId,     // Hereda del producto
-  "_idUsuario": ObjectId,      // Hereda del producto
-  "_idAccesoUsuario": ObjectId // Hereda del producto
-  // ... más campos
+  "_idEmpresa": ObjectId,      
+  "_idSucursal": ObjectId,     
+  "_idUsuario": ObjectId,      
+  "_idAccesoUsuario": ObjectId 
 }
 ```
 
 ### Facturas
-
 ```javascript
 {
   "_id": ObjectId,
@@ -342,7 +354,6 @@ docker logs -f seed_app
   "uuid": String,
   "version": "3.3",
   "activo": true
-  // ... más campos aleatorios
 }
 ```
 
@@ -363,7 +374,6 @@ docker logs -f seed_app
   "descuento": Number,
   "id": Number,
   "_idEmpresa": ObjectId
-  // hereda referencias de la factura padre
 }
 ```
 
@@ -439,7 +449,7 @@ docker-compose up --build
 
 ---
 
-## 📝 Próximas mejoras
+## Próximas mejoras
 
 - [ ] Agregar seed para productos y variaciones en paralelo
 - [ ] Script de validación de integridad referencial
@@ -449,7 +459,7 @@ docker-compose up --build
 
 ---
 
-## 📄 Licencia
+## Licencia
 
 ISC
 
@@ -461,7 +471,7 @@ Proyecto de seeding para testeo
 
 ---
 
-## 💬 Preguntas frecuentes
+## Preguntas frecuentes
 
 **P: ¿Puedo cambiar SEED_N durante la ejecución?**
 R: No, debes parar el contenedor y reiniciar con nuevos valores.

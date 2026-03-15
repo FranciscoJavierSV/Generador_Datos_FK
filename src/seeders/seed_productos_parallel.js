@@ -41,10 +41,10 @@ if (workers > 1) {
   for (let i = 0; i < workers; i++) {
     const start = i * perWorker;
     const end = Math.min(start + perWorker, total);
-    new Worker("./src/worker_seed_productos.js", {
+    new Worker("./src/workers/worker_seed_productos.js", {
       workerData: { start, end, batch, uri }
     });
   }
 } else {
-  require("./worker_seed_productos").run({ start: 0, end: total, batch, uri });
+  require("../workers/worker_seed_productos").run({ start: 0, end: total, batch, uri });
 }

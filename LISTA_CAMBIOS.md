@@ -1,5 +1,9 @@
 # 📝 LISTA COMPLETA DE CAMBIOS
 
+**Nota:** los scripts se han reorganizado a `src/seeders/` (maestros) y `src/workers/` (código de workers). Las rutas en la documentación y los `require`/`Worker` se ajustaron en consecuencia.
+
+
+
 ## 🆕 ARCHIVOS NUEVOS
 
 ```

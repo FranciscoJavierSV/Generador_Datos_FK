@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "seed": "node src/seed_all.js",
-    "seed:clientes": "node src/seed_clientes_parallel.js",
-    "seed:productos": "node src/seed_productos_parallel.js",
-    "seed:variaciones": "node src/seed_variaciones_parallel.js",
-    "seed:facturas": "node src/seed_facturas_parallel.js",
-    "seed:datosfacturas": "node src/seed_datosfacturas_parallel.js"
+    "seed": "node src/seeders/seed_all.js",
+    "seed:clientes": "node src/seeders/seed_clientes_parallel.js",
+    "seed:productos": "node src/seeders/seed_productos_parallel.js",
+    "seed:variaciones": "node src/seeders/seed_variaciones_parallel.js",
+    "seed:facturas": "node src/seeders/seed_facturas_parallel.js",
+    "seed:datosfacturas": "node src/seeders/seed_datosfacturas_parallel.js"
   },
   "keywords": [],
   "author": "",
