@@ -135,14 +135,14 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
 
       if (docs.length > 0) {
         await collection.insertMany(docs);
-        console.log(`[Productos] Insertados ${Math.min(i + batch, end)}/${end}`);
-      } else {
-        console.log(`[Productos] Saltando lote vacío (${i}-${Math.min(i+batch,end)})`);
+        if ((i / batch) % 10 === 0) {
+          console.log(`[Productos] Progreso ${Math.min(i + batch, end)}/${end}`);
+        }
       }
     }
   await client.close();
   if (parentPort) {
-    parentPort.postMessage("done");
+    parentPort.postMessage({ status: "done" });
   }
 }
 

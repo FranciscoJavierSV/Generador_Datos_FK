@@ -36,15 +36,42 @@ if (isNaN(workers) || workers <= 0) {
 
 console.log(`📌 Seeding Facturas: ${total} registros con ${workers} workers`);
 
-if (workers > 1) {
-  const perWorker = Math.ceil(total / workers);
-  for (let i = 0; i < workers; i++) {
-    const start = i * perWorker;
-    const end = Math.min(start + perWorker, total);
-    new Worker("./src/workers/worker_seed_facturas.js", {
-      workerData: { start, end, batch, uri }
-    });
+async function runWorkers() {
+  if (workers > 1) {
+    const perWorker = Math.ceil(total / workers);
+    const promises = [];
+    for (let i = 0; i < workers; i++) {
+      const start = i * perWorker;
+      const end = Math.min(start + perWorker, total);
+      promises.push(new Promise((resolve, reject) => {
+        const w = new Worker("./src/workers/worker_seed_facturas.js", {
+          workerData: { start, end, batch, uri }
+        });
+
+        w.on("message", (msg) => {
+          if (msg && msg.status === "done") return resolve();
+          if (msg && msg.status === "error") return reject(new Error(msg.message || "Worker error"));
+        });
+
+        w.on("error", (err) => reject(err));
+
+        w.on("exit", (code) => {
+          if (code === 0) return resolve();
+          return reject(new Error(`Worker exited with code ${code}`));
+        });
+      }));
+    }
+    await Promise.all(promises);
+    console.log("✅ Todos los workers de facturas terminaron");
+  } else {
+    await require("../workers/worker_seed_facturas").run({ start: 0, end: total, batch, uri });
+    console.log("✅ Seed facturas single-threaded completado");
   }
-} else {
-  require("../workers/worker_seed_facturas").run({ start: 0, end: total, batch, uri });
 }
+
+runWorkers()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("❌ Error en seed_facturas_parallel:", err.message);
+    process.exit(1);
+  });

@@ -137,10 +137,9 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
       // ✅ Validación para evitar lotes vacíos
       if (docs.length > 0) {
         await collection.insertMany(docs);
-        console.log(`[Clientes] Insertados ${Math.min(i + batch, end)}/${end}`);
-      } else {
-        // se debería dar muy raramente, pero si ocurre lo registramos
-        console.warn(`[Clientes] ⚠️ Saltando lote vacío (${i} - ${Math.min(i+batch,end)})`);
+        if ((i / batch) % 10 === 0) {
+          console.log(`[Clientes] Progreso ${Math.min(i + batch, end)}/${end}`);
+        }
       }
     }
 

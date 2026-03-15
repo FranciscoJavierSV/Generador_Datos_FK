@@ -74,13 +74,8 @@ async function runWorkers() {
     await Promise.all(promises);
     console.log("✅ Todos los workers de clientes terminaron");
   } else {
-    // single-threaded: ejecutar la función exportada y propagar errores
-    try {
-      await require("../workers/worker_seed_clientes").run({ start: 0, end: total, batch, uri });
-      console.log("✅ Seed clientes single-threaded completado");
-    } catch (err) {
-      throw err;
-    }
+    await require("../workers/worker_seed_clientes").run({ start: 0, end: total, batch, uri });
+    console.log("✅ Seed clientes single-threaded completado");
   }
 }
 
