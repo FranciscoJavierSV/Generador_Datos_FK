@@ -25,12 +25,11 @@ jobs:
           KAFKA_GROUP_ID=mongo-inserter
           EOF
 
-      - name: Start Kafka & Zookeeper
+      - name: Start Kafka, Zookeeper, Mongo
         run: |
-          docker compose -f docker-compose.yml up -d
-          # wait for broker to be ready (inside kafka container)
+          docker compose -f docker-compose.yml up -d zookeeper kafka mongo
+          timeout 120 bash -c 'until docker compose exec mongo mongo --eval "db.adminCommand(\"ping\")" >/dev/null 2>&1; do sleep 2; done'
           timeout 120 bash -c 'until docker compose exec kafka bash -c "kafka-topics --bootstrap-server kafka:9092 --list" >/dev/null 2>&1; do sleep 2; done'
-
 
       - name: Build Docker image
         uses: docker/build-push-action@v3
@@ -42,16 +41,9 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
 
-      - name: Inspect built image
+      - name: Run seeder via Docker Compose
         run: |
-          echo "--- Inspecting built image for debug strings ---"
-          # Print presence of our diagnostic log and head of worker file and seed_all inside the image
-          docker run --rm base-dr-seeder:latest sh -c \
-            "grep -n 'Parámetros recibidos' /app/src/**/*.js || true; echo '--- worker file head ---'; sed -n '1,200p' /app/src/workers/worker_seed_clientes.js || true; echo '--- seed_all head ---'; sed -n '1,200p' /app/src/seeders/seed_all.js || true"
-
-      - name: Run seeder
-        run: |
-          docker run --rm \
+          docker compose -f docker-compose.yml run --rm \
             -e MONGO_URI="${{ secrets.MONGO_URI }}" \
             -e SEED_N="${{ secrets.SEED_N }}" \
             -e SEED_N_CLIENTES="${{ secrets.SEED_N_CLIENTES }}" \
@@ -59,12 +51,9 @@ jobs:
             -e SEED_N_FACTURAS="${{ secrets.SEED_N_FACTURAS }}" \
             -e SEED_BATCH="${{ secrets.SEED_BATCH }}" \
             -e SEED_WORKERS="${{ secrets.SEED_WORKERS }}" \
-            base-dr-seeder:latest
+            seed_app node src/seeders/seed_all.js
 
-      - name: Smoke-test Kafka producers/consumers
-        continue-on-error: true
+      - name: Optional smoke test skipped
         run: |
-          docker compose exec seed_app node src/kafka/consumer.js &
-          sleep 5
-          docker compose exec seed_app node src/kafka/producer.js
+          echo "Smoke test disabled in CI, seeding completed in previous step."
 

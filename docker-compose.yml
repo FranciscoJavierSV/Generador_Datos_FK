@@ -26,6 +26,16 @@ services:
     depends_on:
       - zookeeper
 
+  mongo:
+    image: mongo:6.0
+    ports:
+      - '27017:27017'
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   seed_app:
     build: .
     container_name: seed_app
@@ -39,5 +49,6 @@ services:
       - KAFKA_TOPIC=${KAFKA_TOPIC}
     depends_on:
       - kafka
+      - mongo
     restart: "no"
 
