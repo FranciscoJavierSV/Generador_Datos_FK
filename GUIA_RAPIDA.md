@@ -1,37 +1,58 @@
-# 🚀 GUÍA RÁPIDA DE INICIO
+# GUIA RAPIDA DE INICIO
 
-El proyecto genera datos coherentes en MongoDB usando Faker y Kafka en un
-entorno completamente conteinerizado.
+## Levantar servicios
 
-## 🐳 Uso con Docker (único compose)
+```bash
+cd /home/javi/baseDR
+docker-compose up --build
+```
 
-1. Ir al directorio del proyecto:
-   ```bash
-   cd /home/javi/baseDR
-   ```
-2. Ajusta `.env` para que `MONGO_URI` apunte a tu clúster Atlas.
-3. Construir y ejecutar:
-   ```bash
-   docker-compose up --build   # levanta Zookeeper, Kafka y seed_app
-   ```
+Servicios que inician:
+- Kafka (puerto 9092)
+- Consumer (puerto 9464)
+- Producer (genera datos)
 
-Nada se instala en el host; sólo necesitas Docker y Compose.
+## Ver datos en tiempo real
 
-## ▶️ Ejecución adicional
+```bash
+curl http://localhost:9464/stats
+```
 
-- Para ejecutar el producer manualmente:
-  ```bash
-  docker-compose run --rm seed_app node src/kafka/producer.js
-  ```
-- Prometheus/Grafana y demás servicios opcionales pueden agregarse a un
-  compose separado si lo deseas.
+O descargar todos los datos:
 
-## 📊 Verificación
+```bash
+curl http://localhost:9464/data > datos.json
+```
 
-Conéctate a la base (Atlas) o al topic de Kafka para comprobar resultados
-y métricas.
+## Procesar datos para graficas
+
+```bash
+node scripts/data_processor.js
+```
+
+Genera:
+- `data/processed/stats.json`
+- `data/processed/charts.json`
+- `data/processed/export.csv`
+
+## Ver datos capturados
+
+```bash
+bash get_data.sh
+```
+
+## Parar servicios
+
+```bash
+docker-compose down
+```
+
+Borrar volumen de Kafka:
+
+```bash
+docker-compose down -v
+```
 
 ---
 
-El resto de la documentación (`README.md`, `TESTING.md`, etc.) contiene
-detalles más amplios si necesitas profundizar.
+Ver mas informacion en: **README.md** y **LISTA_CAMBIOS.md**

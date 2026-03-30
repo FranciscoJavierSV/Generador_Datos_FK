@@ -1,17 +1,17 @@
-// log version info as early as possible
-console.log(`📦 Seed script starting (GIT_COMMIT=${process.env.GIT_COMMIT || 'none'})`);
+// LOG: Informacion de version
+console.log(`Seed script starting (GIT_COMMIT=${process.env.GIT_COMMIT || 'none'})`);
 
 const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
 
-// enforce Docker-only execution
+// VALIDACION: Verificar que se ejecuta dentro de Docker
 if (!fs.existsSync("/.dockerenv")) {
-  console.error("❌ Este script sólo se ejecuta dentro de Docker. Usa docker-compose para iniciar.");
+  console.error("Este script solo se ejecuta dentro de Docker. Usa docker-compose para iniciar.");
   process.exit(1);
 }
 
-// permite especificar un número distinto para clientes
+// CONFIGURACION: Parsear parametros y variables de entorno
 let total =
   args.n ||
   process.env.SEED_N_CLIENTES ||
@@ -21,27 +21,27 @@ let batch = args.batch || process.env.SEED_BATCH || 10000;
 let workers = args.workers || process.env.SEED_WORKERS || 4;
 const uri = args.uri || process.env.MONGO_URI || "mongodb://localhost:27017";
 
-// Asegurar que sean números válidos (GitHub Actions enmascara valores y puede
-// dejar cadenas asterisqueadas, lo que rompería las matemáticas de la división)
+// VALIDACION: Coercionar a numeros y validar rangos
 total = Number(total);
 batch = Number(batch);
 workers = Number(workers);
 
 if (isNaN(total) || total < 0) {
-  console.error("❌ Valor inválido para total (SEED_N):", total);
+  console.error("Valor invalido para total (SEED_N):", total);
   process.exit(1);
 }
 if (isNaN(batch) || batch <= 0) {
-  console.error("❌ Valor inválido para batch (SEED_BATCH):", batch);
+  console.error("Valor invalido para batch (SEED_BATCH):", batch);
   process.exit(1);
 }
 if (isNaN(workers) || workers <= 0) {
-  console.error("❌ Valor inválido para workers (SEED_WORKERS):", workers);
+  console.error("Valor invalido para workers (SEED_WORKERS):", workers);
   process.exit(1);
 }
 
-console.log(`📌 Seeding Clientes: ${total} registros con ${workers} workers`);
+console.log(`Seeding Clientes: ${total} registros con ${workers} workers`);
 
+// UTILIDADES: Ejecutar workers en paralelo o secuencial
 async function runWorkers() {
   if (workers > 1) {
     const perWorker = Math.ceil(total / workers);
@@ -70,18 +70,19 @@ async function runWorkers() {
       }));
     }
 
-    // esperar a que todos terminen (o fallen)
+    // Esperar a que todos los workers terminen
     await Promise.all(promises);
-    console.log("✅ Todos los workers de clientes terminaron");
+    console.log("Todos los workers de clientes terminaron");
   } else {
     await require("../workers/worker_seed_clientes").run({ start: 0, end: total, batch, uri });
-    console.log("✅ Seed clientes single-threaded completado");
+    console.log("Seed clientes single-threaded completado");
   }
 }
 
+// EJECUCION: Correr workers y terminar el proceso
 runWorkers()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error("❌ Error en seed_clientes_parallel:", err.message);
+    console.error("Error en seed_clientes_parallel:", err.message);
     process.exit(1);
   });

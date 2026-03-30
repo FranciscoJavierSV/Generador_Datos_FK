@@ -1,40 +1,26 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - '2181:2181'
-
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: apache/kafka:latest
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_HEAP_OPTS: '-Xmx512m -Xms256m'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      KAFKA_LOG_MESSAGE_MAX_BYTES: '${KAFKA_LOG_MESSAGE_MAX_BYTES}'
+      KAFKA_REPLICA_FETCH_MAX_BYTES: '${KAFKA_REPLICA_FETCH_MAX_BYTES}'
+      KAFKA_MESSAGE_MAX_BYTES: '${KAFKA_LOG_MESSAGE_MAX_BYTES}'
     ports:
       - '9092:9092'
-      - '9093:9093'
-    depends_on:
-      - zookeeper
-
-  mongo:
-    image: mongo:6.0
-    ports:
-      - '27017:27017'
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    restart: unless-stopped
 
   seed_app:
     build: .
@@ -48,36 +34,26 @@ services:
       - KAFKA_TOPIC=${KAFKA_TOPIC}
     depends_on:
       - kafka
-      - mongo
-    restart: "no"
-
-  producer:
-    build: .
-    env_file: .env
-    environment:
-      - KAFKA_BROKERS=${KAFKA_BROKERS}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
-      - MAX_MESSAGES=1000
-    command: ["node", "src/kafka/producer.js"]
-    depends_on:
-      - kafka
     restart: "no"
 
   consumer:
     build: .
     env_file: .env
     environment:
-      - MONGO_URI=${MONGO_URI}
       - KAFKA_BROKERS=${KAFKA_BROKERS}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
       - METRICS_PORT=9464
-      - MAX_MESSAGES=1000
     command: ["node", "src/kafka/consumer.js"]
     ports:
       - "9464:9464"
     depends_on:
       - kafka
-      - mongo
-    restart: "no"
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  kafka_data:
+    driver: local
 

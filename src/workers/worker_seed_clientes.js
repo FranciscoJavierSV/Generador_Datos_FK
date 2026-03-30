@@ -1,8 +1,9 @@
 const { workerData, parentPort } = require("worker_threads");
-const { MongoClient, ObjectId, Decimal128 } = require("mongodb");
+const { ObjectId, Decimal128 } = require("mongodb");
+const { Kafka } = require("kafkajs");
 const faker = require("@faker-js/faker").faker;
 
-// Oficinas/sucursales ficticias pero constantes
+// REFERENCIAS: Sucursales ficticias pero constantes y reutilizables
 const SUCURSALES = {
   "5f4564baf25d554a7f2b2818": "Sucursal Principal",
   "5f4564baf25d554a7f2b2819": "Sucursal Norte",
@@ -11,17 +12,20 @@ const SUCURSALES = {
   "5f4564baf25d554a7f2b281c": "Sucursal Oeste"
 };
 
+// REFERENCIAS: Empresas constantes
 const EMPRESAS = {
   "5fd9545f6dce8d6e9f0c7dde": "Empresa Principal",
   "5fd9545f6dce8d6e9f0c7ddf": "Empresa Secundaria"
 };
 
+// REFERENCIAS: Listas de precios constantes
 const LISTAS_PRECIOS = {
   "5f453c37ba107821fcc5a9f6": "Lista Minorista",
   "5f453c37ba107821fcc5a9f7": "Lista Mayorista",
   "5f453c37ba107821fcc5a9f8": "Lista Distribuidor"
 };
 
+// GENERACION: Crear documento cliente con datos coherentes
 function generarCliente(index, sucursal, empresa, listaPrecios) {
   const nombreGenerado = faker.person.firstName();
   const apellidoPaterno = faker.person.lastName();
@@ -77,37 +81,55 @@ function generarCliente(index, sucursal, empresa, listaPrecios) {
     saldoAFavor: Decimal128.fromString(
       faker.number.float({ min: 0, max: 5000, precision: 0.01 }).toFixed(2)
     ),
-    tipo: faker.helpers.arrayElement([1, 2, 3])
+    tipo: faker.helpers.arrayElement([1, 2, 3]),
+    _type: 'clientes'
   };
 }
 
 async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhost:27017" }) {
-  // convertir los parámetros a número para evitar cadenas o valores '***' en logs
+  // VALIDACION: Coercionar parametros a numeros
   start = Number(start);
   end = Number(end);
   batch = Number(batch);
 
-  // registro diagnóstico para facilitar el debug en CI
-  console.log(`[Clientes worker] Parámetros recibidos start=${start} end=${end} batch=${batch} uri=${uri}`);
+  // LOG: Diagnostico de parametros para debugging en CI
+  console.log(`[Clientes worker] Parametros: start=${start} end=${end} batch=${batch} uri=${uri}`);
 
-  // si el usuario pasó valores extraños, fallar rápido
+  // VALIDACION: Detectar parametros invalidos
   if (isNaN(start) || isNaN(end) || isNaN(batch) || batch <= 0) {
-    throw new Error(`Parámetros inválidos start=${start} end=${end} batch=${batch}`);
+    throw new Error(`Parametros invalidos start=${start} end=${end} batch=${batch}`);
   }
 
-  // si no hay trabajo, salir sin tocar la BD
+  // CONTROL: Si no hay trabajo, salir sin tocar BD
   if (start >= end) {
     if (parentPort) parentPort.postMessage({ status: "done" });
     return;
   }
 
   try {
-    const client = new MongoClient(uri);
-    await client.connect();
-    const db = client.db("test");
-    const collection = db.collection("clientes");
+    const kafka = new Kafka({
+      clientId: 'seed-clientes',
+      brokers: (process.env.KAFKA_BROKERS || 'kafka:9092').split(','),
+      connectionTimeout: 10000,
+      requestTimeout: 10000,
+      retry: {
+        initialRetryTime: 300,
+        retries: 8,
+        randomizationFactor: 0.2,
+        multiplier: 2,
+        maxRetryTime: 30000
+      }
+    });
+    const producer = kafka.producer({
+      compression: 1, // Gzip compression
+      maxInFlightRequests: 5,
+      idempotent: true
+    });
+    console.log(`[Clientes] Intentando conectar a Kafka: ${process.env.KAFKA_BROKERS || 'kafka:9092'}...`);
+    await producer.connect();
+    console.log(`[Clientes] Conectado exitosamente a Kafka`);
 
-    // Crear referencias constantes
+    // REFERENCIAS: Construir arrays de sucursales, empresas y listas de precios
     const sucursales = Object.entries(SUCURSALES).map(([id, nombre]) => ({
       _id: new ObjectId(id),
       _idAccesoUsuario: new ObjectId(),
@@ -125,6 +147,7 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
       nombre
     }));
 
+    // PROCESAMIENTO: Generar e insertar clientes en lotes
     for (let i = start; i < end; i += batch) {
       const docs = [];
       for (let j = i; j < Math.min(i + batch, end); j++) {
@@ -134,16 +157,23 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
         docs.push(generarCliente(j, sucursal, empresa, listaPrecios));
       }
 
-      // ✅ Validación para evitar lotes vacíos
+      // VALIDACION: Verificar que el lote no este vacio antes de insertar
       if (docs.length > 0) {
-        await collection.insertMany(docs);
+        const messages = docs.map(doc => ({
+          value: JSON.stringify(doc)
+        }));
+        await producer.send({
+          topic: 'data',
+          messages: messages
+        });
         if ((i / batch) % 10 === 0) {
           console.log(`[Clientes] Progreso ${Math.min(i + batch, end)}/${end}`);
         }
       }
     }
 
-    await client.close();
+    // FINALIZACION: Cerrar conexion y notificar
+    await producer.disconnect();
     if (parentPort) {
       parentPort.postMessage({ status: "done" });
     }
@@ -153,7 +183,6 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
     if (parentPort) {
       parentPort.postMessage({ status: "error", message: err.message || String(err) });
     }
-    // Re-throw para que, si se ejecuta en single-thread, el proceso padre reciba el rechazo
     throw err;
   }
 }

@@ -1,5 +1,6 @@
 const { workerData, parentPort } = require("worker_threads");
-const { MongoClient, ObjectId } = require("mongodb");
+const { ObjectId } = require("mongodb");
+const { Kafka } = require("kafkajs");
 const faker = require("@faker-js/faker").faker;
 
 // Oficinas/sucursales ficticias pero constantes
@@ -68,7 +69,8 @@ function generarProducto(index, sucursal, empresa, moneda, unidad, claveProd, us
     _idMoneda: moneda._id,
     _idMonedaCosto: moneda._id,
     precio: faker.number.float({ min: 10, max: 10000, precision: 0.01 }),
-    costo: faker.number.float({ min: 5, max: 5000, precision: 0.01 })
+    costo: faker.number.float({ min: 5, max: 5000, precision: 0.01 }),
+    _type: 'productos'
   };
 }
 
@@ -85,10 +87,28 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
     return;
   }
 
-  const client = new MongoClient(uri);
-  await client.connect();
-  const db = client.db("test");
-  const collection = db.collection("productos");
+  try {
+    const kafka = new Kafka({
+      clientId: 'seed-productos',
+      brokers: (process.env.KAFKA_BROKERS || 'kafka:9092').split(','),
+      connectionTimeout: 10000,
+      requestTimeout: 10000,
+      retry: {
+        initialRetryTime: 300,
+        retries: 8,
+        randomizationFactor: 0.2,
+        multiplier: 2,
+        maxRetryTime: 30000
+      }
+    });
+    const producer = kafka.producer({
+      compression: 1, // Gzip compression
+      maxInFlightRequests: 5,
+      idempotent: true
+    });
+    console.log(`[Productos] Intentando conectar a Kafka: ${process.env.KAFKA_BROKERS || 'kafka:9092'}...`);
+    await producer.connect();
+    console.log(`[Productos] Conectado exitosamente a Kafka`);
 
   // Crear referencias constantes
   const sucursales = Object.entries(SUCURSALES).map(([id, nombre]) => ({
@@ -134,16 +154,34 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
       }
 
       if (docs.length > 0) {
-        await collection.insertMany(docs);
+        const messages = docs.map(doc => ({
+          value: JSON.stringify(doc)
+        }));
+        await producer.send({
+          topic: 'data',
+          messages: messages
+        });
         if ((i / batch) % 10 === 0) {
           console.log(`[Productos] Progreso ${Math.min(i + batch, end)}/${end}`);
         }
       }
     }
-  await client.close();
-  if (parentPort) {
-    parentPort.postMessage({ status: "done" });
+    await producer.disconnect();
+    if (parentPort) {
+      parentPort.postMessage({ status: "done" });
+    }
+  } catch (error) {
+    console.error(`[Productos] ERROR: ${error.message}`);
+    if (parentPort) parentPort.postMessage({ status: "error", message: error.message });
+    throw error;
   }
 }
 
 module.exports = { run };
+
+// Si el archivo se ejecuta como Worker thread, arrancar automáticamente
+if (typeof workerData !== "undefined" && workerData !== null) {
+  run(workerData).catch((err) => {
+    process.exit(1);
+  });
+}
