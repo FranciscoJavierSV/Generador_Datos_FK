@@ -53,7 +53,45 @@ services:
     volumes:
       - ./data:/app/data
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - consumer
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  web:
+    build: .
+    env_file: .env
+    environment:
+      - WEB_PORT=8080
+    command: ["node", "src/web/app.js"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - consumer
+    restart: unless-stopped
+
 volumes:
   kafka_data:
+    driver: local
+  grafana_data:
     driver: local
 

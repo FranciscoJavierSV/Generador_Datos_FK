@@ -41,6 +41,12 @@ Genera:
 bash get_data.sh
 ```
 
+## Ver métricas en tiempo real
+
+- **Grafana**: http://localhost:3000 (admin/admin) - Dashboards de métricas Prometheus
+- **Prometheus**: http://localhost:9090 - Métricas crudas
+- **Dashboard Web**: http://localhost:8080 - Gráficas de datos procesados
+
 ## Parar servicios
 
 ```bash

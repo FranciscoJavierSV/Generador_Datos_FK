@@ -36,8 +36,8 @@ Ver datos: curl http://localhost:9464/data
 ## Flujo de Datos
 
 ```
-Producer (seed_app) ─── Kafka (KRaft) ─── Consumer (almacena) ─── Data Processor
-       ↓                                          ↓                     ↓
+Producer (seed_app) -> Kafka (KRaft) -> Consumer (almacena) -> Data Processor
+       |                                          |                     |
   Genera datos                        /app/data (volumen)       datos/processed/
   con Faker                           - messages.jsonl
                                       - stats.json
@@ -92,6 +92,24 @@ Genera:
 - `data/processed/stats.json` - Estadisticas por campo
 - `data/processed/charts.json` - Datos para graficas
 - `data/processed/export.csv` - Export en CSV
+
+---
+
+## Visualización de Métricas
+
+### Grafana (Métricas en Tiempo Real)
+- **URL**: http://localhost:3000
+- **Usuario**: admin
+- **Contraseña**: admin
+- Conecta a Prometheus para dashboards de métricas del consumer (mensajes, latencias, errores).
+
+### Dashboard Web (Gráficas de Datos Procesados)
+- **URL**: http://localhost:8080
+- Muestra gráficas interactivas basadas en `data/processed/charts.json` generado por `data_processor.js`.
+
+### Prometheus
+- **URL**: http://localhost:9090
+- Fuente de datos para Grafana, expone métricas del consumer.
 
 ---
 

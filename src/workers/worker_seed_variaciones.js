@@ -95,7 +95,7 @@ async function run({ start, end, batch, uri }) {
     }));
 
     // Simular productos con variaciones (generar en cliente)
-    const numProductos = 50; // Cantidad de productos para generar
+    const numProductos = 200; // Cantidad de productos para generar
     const productosConVariaciones = [];
     for (let i = 0; i < numProductos; i++) {
       productosConVariaciones.push({

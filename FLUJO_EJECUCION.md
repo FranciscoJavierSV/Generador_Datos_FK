@@ -2,9 +2,7 @@ FLUJO DE EJECUCION DEL PROYECTO
 
 FASE 1: INICIACION (docker-compose up --build)
 
-┌─────────────────────────────────────────────────────────────────┐
-│ PASO 1: docker-compose up --build                              │
-└─────────────────────────────────────────────────────────────────┘
+[PASO 1: docker-compose up --build]
 
 Acciones:
 - Construye imagen Docker desde Dockerfile
@@ -13,16 +11,14 @@ Acciones:
 
 Estado:
 HOST                       CONTENEDOR
-/home/javi/baseDR/ ─────→  /app/ (mapeado)
-./data/ ◄─────────────────  /app/data/ (volumen bidireccional)
+/home/javi/baseDR/ ------> /app/ (mapeado)
+./data/ <-------------- /app/data/ (volumen bidireccional)
 
 ---
 
 FASE 2: KAFKA INICIA (segundos 1-10)
 
-┌─────────────────────────────────────────────────────────────────┐
-│ PASO 2: Servicio KAFKA en modo KRaft                           │
-└─────────────────────────────────────────────────────────────────┘
+[PASO 2: Servicio KAFKA en modo KRaft]
 
 ¿Qué pasa?
 - Kafka 7.5.0 inicia en KRAFT_MODE=true
@@ -31,29 +27,27 @@ FASE 2: KAFKA INICIA (segundos 1-10)
 
 Archivos/Datos:
 CONTENEDOR KAFKA:
-/var/lib/kafka/data/ ◄───── Volumen docker (kafka_data)
-  ├── logs/
-  ├── __cluster_metadata-0/
-  └── [datos internos de Kafka]
+/var/lib/kafka/data/ -------- Volumen docker (kafka_data)
+  - logs/
+  - __cluster_metadata-0/
+  - [datos internos de Kafka]
 
 HOST:
-~(.docker/volumes/kafka_data/_data/) ← datos persistentes reales
+~(.docker/volumes/kafka_data/_data/) : datos persistentes reales
 
 Endpoint disponible:
 localhost:9092 (conexion para producers/consumers)
 
 Log de confirmacion:
-✓ kafka broker activo
-✓ puerto 9092 escuchando
-✓ topic "productos" listo para recibir datos
+[OK] kafka broker activo
+[OK] puerto 9092 escuchando
+[OK] topic "productos" listo para recibir datos
 
 ---
 
 FASE 3: SEED_APP GENERA DATOS (segundos 10-XX, depende de SEED_N)
 
-┌─────────────────────────────────────────────────────────────────┐
-│ PASO 3: seed_app envía datos a Kafka                           │
-└─────────────────────────────────────────────────────────────────┘
+[PASO 3: seed_app envía datos a Kafka]
 
 ¿Qué pasa?
 - Inicia seed_all.js (orquestador maestro)
@@ -63,7 +57,7 @@ FASE 3: SEED_APP GENERA DATOS (segundos 10-XX, depende de SEED_N)
 - Datos se envían a Kafka topic "productos"
 
 Flujo de datos:
-Faker.js ──→ Worker threads ──→ Kafka producer ──→ Kafka broker (localhost:9092)
+Faker.js --> Worker threads --> Kafka producer --> Kafka broker (localhost:9092)
 (genera)    (4 en paralelo)     (serializa JSON)    (almacena en memory + disk)
 
 Logs esperados:
@@ -97,8 +91,7 @@ Duracion esperada:
 FASE 4: CONSUMER LEE Y ALMACENA (inicia en paralelo a seed_app)
 
 ┌─────────────────────────────────────────────────────────────────┐
-│ PASO 4: consumer.js consume mensajes y guarda localmente       │
-└─────────────────────────────────────────────────────────────────┘
+[PASO 4: consumer.js consume mensajes y guarda localmente]
 
 ¿Qué pasa?
 - Consumer se conecta a Kafka
@@ -108,24 +101,24 @@ FASE 4: CONSUMER LEE Y ALMACENA (inicia en paralelo a seed_app)
 - Expone API REST en puerto 9464
 
 Conexion:
-Consumer ──→ Kafka broker (localhost:9092) ──→ Lee topic "productos"
+Consumer --> Kafka broker (localhost:9092) --> Lee topic "productos"
             (KafkaJS client)
 
 Almacenamiento LOCAL (DENTRO DEL CONTENEDOR):
 
 /app/data/
-├── messages.jsonl       (cada mensaje en una linea)
-├── stats.json          (estadisticas actuales, se actualiza cada 5s)
-├── stats_histórico.jsonl (log de todas las ejecuciones)
-├── estadísticas/
-│   ├── execution_1.json
-│   ├── execution_2.json
-│   ├── execution_3.json
-│   └── ...
-└── processed/ (generado manualmente con data_processor.js)
-    ├── stats.json
-    ├── charts.json
-    └── export.csv
+- messages.jsonl       (cada mensaje en una linea)
+- stats.json          (estadisticas actuales, se actualiza cada 5s)
+- stats_histórico.jsonl (log de todas las ejecuciones)
+- estadísticas/
+  - execution_1.json
+  - execution_2.json
+  - execution_3.json
+  - ...
+- processed/ (generado manualmente con data_processor.js)
+  - stats.json
+  - charts.json
+  - export.csv
 
 Ejemplo de messages.jsonl:
 {"_id":"67c2abc1...","nombre":"Producto A","precio":100.5,"tieneVariaciones":true}
@@ -160,10 +153,10 @@ Respuesta: Info sobre archivos guardados
 GET http://localhost:9464/metrics
 Respuesta: Metricas en formato Prometheus
 
-MAPEO DE VOLUMENES (LOCAL ↔ CONTENEDOR):
+MAPEO DE VOLUMENES (LOCAL <-> CONTENEDOR):
 
 HOST                          CONTENEDOR
-~baseDR/data/ ◄──→ /app/data/
+~baseDR/data/ <---> /app/data/
 (montaje bidireccional)       (donde consumer guarda)
 
 VISIBLE EN HOST:
@@ -247,7 +240,6 @@ Ejemplo charts.json:
 TIMELINE DE EJECUCION (SEED_N=100)
 
 Segundo     Evento                              Accion
-─────────────────────────────────────────────────────────────────
 0           docker-compose up --build          Inicia
 1-5         Kafka inicia KRaft mode            Espera healthcheck
 6           seed_app inicia                    Lee .env
@@ -265,7 +257,6 @@ INFORMACIÓN DE ARCHIVOS
 EN EL HOST (./data/):
 
 File                  Size        Contenido
-─────────────────────────────────────────────────────────────────
 messages.jsonl        ~5KB @ 100  Una linea JSON por mensaje
                       ~500KB @ 100k
                       ~5MB @ 1M
@@ -279,9 +270,9 @@ processed/export.csv  ~5KB        CSV para Excel
 DENTRO DEL CONTENEDOR (Kafka):
 
 /var/lib/kafka/data/
-├── logs/              Logs internos de Kafka
-├── __cluster_metadata-0/  Metadata
-└── other_files        Topic data (persistencia)
+- logs/              Logs internos de Kafka
+- __cluster_metadata-0/  Metadata
+- other_files        Topic data (persistencia)
 
 ---
 

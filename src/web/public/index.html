@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>BaseDR - Dashboard de Métricas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .chart-container { width: 80%; margin: 20px auto; }
+        h1 { text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard de Métricas - BaseDR</h1>
+    <div class="chart-container">
+        <canvas id="statsChart"></canvas>
+    </div>
+
+    <script>
+        async function loadCharts() {
+            try {
+                const response = await fetch('/api/charts');
+                const data = await response.json();
+
+                // Ejemplo: gráfico de barras para alguna métrica
+                const ctx = document.getElementById('statsChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data),
+                        datasets: [{
+                            label: 'Valores',
+                            data: Object.values(data),
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading charts:', error);
+            }
+        }
+
+        loadCharts();
+    </script>
+</body>
+</html>
