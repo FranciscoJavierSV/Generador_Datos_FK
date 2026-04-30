@@ -1,3 +1,6 @@
+# ORQUESTADOR PRINCIPAL: Kafka, Consumer, Prometheus, Grafana
+# seed_app se ejecuta manual: docker-compose run seed_app
+
 services:
   kafka:
     image: apache/kafka:latest
@@ -22,27 +25,19 @@ services:
       - kafka_data:/var/lib/kafka/data
     restart: unless-stopped
 
-  seed_app:
-    build: .
-    env_file: .env
-    environment:
-      - MONGO_URI=${MONGO_URI}
-      - SEED_N=${SEED_N}
-      - SEED_BATCH=${SEED_BATCH}
-      - SEED_WORKERS=${SEED_WORKERS}
-      - KAFKA_BROKERS=${KAFKA_BROKERS}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
-    depends_on:
-      - kafka
-    restart: "no"
+  # NOTA: seed_app no se inicia automáticamente
+  # Ejecutar manualmente: docker-compose run seed_app
 
   consumer:
-    build: .
+    build:
+      context: ./data-ingestion
     env_file: .env
     environment:
+      - MONGO_URI=mongodb://appuser:T9%23kL2%40vQ8!mX4%24Rs7%5EWp1%26Zc5Yh3N@host.docker.internal:27018/baseDR?authSource=baseDR
       - KAFKA_BROKERS=${KAFKA_BROKERS}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
+      - CONSUMER_BATCH_SIZE=${CONSUMER_BATCH_SIZE}
       - METRICS_PORT=9464
     command: ["node", "src/kafka/consumer.js"]
     ports:
@@ -52,15 +47,38 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  seed_app:
+    build: ./data-ingestion
+    profiles:
+      - seed
+    env_file: .env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - SEED_N=${SEED_N}
+      - SEED_BATCH=${SEED_BATCH}
+      - SEED_WORKERS=${SEED_WORKERS}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    command: ["node", "src/seeders/seed_all.js"]
+    depends_on:
+      - kafka
+    restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   prometheus:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    depends_on:
-      - consumer
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
     restart: unless-stopped
 
   grafana:
@@ -68,29 +86,18 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
+    restart: unless-stopped
     depends_on:
       - prometheus
-    restart: unless-stopped
-
-  web:
-    build: .
-    env_file: .env
-    environment:
-      - WEB_PORT=8080
-    command: ["node", "src/web/app.js"]
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - consumer
-    restart: unless-stopped
 
 volumes:
   kafka_data:
+    driver: local
+  prometheus_data:
     driver: local
   grafana_data:
     driver: local

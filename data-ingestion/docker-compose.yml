@@ -1,0 +1,46 @@
+services:
+  kafka:
+    image: apache/kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      KAFKA_LOG_MESSAGE_MAX_BYTES: '${KAFKA_LOG_MESSAGE_MAX_BYTES}'
+      KAFKA_REPLICA_FETCH_MAX_BYTES: '${KAFKA_REPLICA_FETCH_MAX_BYTES}'
+      KAFKA_MESSAGE_MAX_BYTES: '${KAFKA_LOG_MESSAGE_MAX_BYTES}'
+    ports:
+      - '9092:9092'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    restart: unless-stopped
+
+  consumer:
+    build: .
+    env_file: ../.env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
+      - CONSUMER_BATCH_SIZE=${CONSUMER_BATCH_SIZE}
+      - METRICS_PORT=9464
+    command: ["node", "src/kafka/consumer.js"]
+    ports:
+      - "9464:9464"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - ../data:/app/data
+
+volumes:
+  kafka_data:
+    driver: local

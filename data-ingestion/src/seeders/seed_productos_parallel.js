@@ -2,11 +2,6 @@ const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
 
-if (!fs.existsSync("/.dockerenv")) {
-  console.error("❌ Sólo dentro de Docker. Inicia con docker-compose.");
-  process.exit(1);
-}
-
 // permite especificar un número distinto para productos
 let total =
   args.n ||

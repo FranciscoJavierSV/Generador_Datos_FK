@@ -1,15 +1,9 @@
 // LOG: Informacion de version
-console.log(`Seed script starting (GIT_COMMIT=${process.env.GIT_COMMIT || 'none'})`);
+console.log(`📌 Seeding Clientes: iniciando...`);
 
 const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
-
-// VALIDACION: Verificar que se ejecuta dentro de Docker
-if (!fs.existsSync("/.dockerenv")) {
-  console.error("Este script solo se ejecuta dentro de Docker. Usa docker-compose para iniciar.");
-  process.exit(1);
-}
 
 // CONFIGURACION: Parsear parametros y variables de entorno
 let total =

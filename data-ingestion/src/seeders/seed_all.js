@@ -3,8 +3,6 @@ const fs = require("fs");
 
 // VALIDACION: Verificar que se ejecuta dentro de Docker
 if (!fs.existsSync("/.dockerenv")) {
-  console.error("Este proyecto solo puede ejecutarse dentro de un contenedor Docker.\n" +
-                "Usa 'docker-compose up' desde la raiz del repositorio.");
   process.exit(1);
 }
 

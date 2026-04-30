@@ -2,11 +2,6 @@ const fs = require("fs");
 const { Worker } = require("worker_threads");
 const args = require("minimist")(process.argv.slice(2));
 
-if (!fs.existsSync("/.dockerenv")) {
-  console.error("❌ Este script sólo se ejecuta dentro de Docker. Usa docker-compose para iniciar.");
-  process.exit(1);
-}
-
 // número de facturas a generar (puede venir de SEED_N_FACTURAS)
 let total =
   args.n ||

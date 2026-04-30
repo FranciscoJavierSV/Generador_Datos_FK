@@ -1,6 +1,6 @@
 const { workerData, parentPort } = require("worker_threads");
 const { ObjectId } = require("mongodb");
-const { Kafka } = require("kafkajs");
+const { Kafka, Partitioners } = require("kafkajs");
 const faker = require("@faker-js/faker").faker;
 
 // Oficinas/sucursales ficticias pero constantes
@@ -89,7 +89,7 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
 
   try {
     const kafka = new Kafka({
-      clientId: 'seed-productos',
+      clientId: `seed-productos-${start}`,
       brokers: (process.env.KAFKA_BROKERS || 'kafka:9092').split(','),
       connectionTimeout: 10000,
       requestTimeout: 10000,
@@ -102,9 +102,10 @@ async function run({ start = 0, end = 0, batch = 1000, uri = "mongodb://localhos
       }
     });
     const producer = kafka.producer({
+      createPartitioner: Partitioners.LegacyPartitioner,
       compression: 1, // Gzip compression
-      maxInFlightRequests: 5,
-      idempotent: true
+      maxInFlightRequests: 1,
+      idempotent: false
     });
     console.log(`[Productos] Intentando conectar a Kafka: ${process.env.KAFKA_BROKERS || 'kafka:9092'}...`);
     await producer.connect();

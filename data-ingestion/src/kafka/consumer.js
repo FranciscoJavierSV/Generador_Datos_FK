@@ -129,17 +129,7 @@ function saveStats() {
   return stats;
 }
 
-// LOG: Mostrar métricas cada 10 segundos
-async function logMetrics() {
-  const elapsedSec = (Date.now() - startTime) / 1000;
-  const errorRate = ((errors / (received || 1)) * 100).toFixed(2);
-  console.log(`\n-- Métricas del Consumer (Ejecución #${EXECUTION_ID}) --`);
-  console.log(`Tiempo: ${elapsedSec.toFixed(1)}s`);
-  console.log(`Recibidos: ${received} | Insertados: ${inserted} | Errores: ${errors} (${errorRate}%)`);
-  console.log(`Throughput: ${(inserted / elapsedSec).toFixed(1)} docs/s`);
-  console.log(`Latencia batch: p50=${percentile(batchInsertLatencies, 50)}ms p95=${percentile(batchInsertLatencies, 95)}ms p99=${percentile(batchInsertLatencies, 99)}ms`);
-  saveStats();
-}
+// LOG: Mostrar métricas cada 10 segundos (removido - usar métricas Prometheus)
 
 // HTTP: Servidor con endpoints
 function startHttpServer() {
@@ -200,10 +190,9 @@ function startHttpServer() {
 }
 
 // KAFKA + MONGODB: Conectar e insertar
+const BATCH_MAX_WAIT_MS = parseInt(process.env.CONSUMER_BATCH_MAX_WAIT_MS || '2000', 10);
+
 async function run() {
-  console.log(`\n╔══════════════════════════════════════════╗`);
-  console.log(`║  Consumer - Ejecución #${EXECUTION_ID}          ║`);
-  console.log(`╚══════════════════════════════════════════╝\n`);
   
   // MONGODB: Conectar
   console.log(`Conectando a MongoDB: ${MONGO_URI.split('@')[0]}@...`);
@@ -222,11 +211,10 @@ async function run() {
   await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
 
   startTime = Date.now();
-  setInterval(logMetrics, 10000);
   startHttpServer();
 
-  // UTILIDADES: Obtener colección según tipo
-  function getCollection(dataType) {
+  // UTILIDADES: Obtener nombre de colección según tipo
+  function getCollectionName(dataType) {
     const typeMap = {
       'clientes': 'clientes',
       'productos': 'productos',
@@ -234,12 +222,89 @@ async function run() {
       'facturas': 'facturas',
       'datosfacturas': 'datosfacturas'
     };
-    const collectionName = typeMap[dataType] || 'registros';
-    return db.collection(collectionName);
+    return typeMap[dataType] || 'registros';
   }
 
-  // PROCESAMIENTO: Acumular en lotes e insertar
+  // UTILIDADES: Inserción de batch
   let batch = [];
+  let lastBatchFlush = Date.now();
+  let shuttingDown = false;
+  let flushInterval;
+  let flushInProgress = false;
+
+  async function flushBatch() {
+    if (!batch.length) {
+      lastBatchFlush = Date.now();
+      return;
+    }
+
+    const currentBatch = batch;
+    batch = [];
+    lastBatchFlush = Date.now();
+    const t0 = Date.now();
+
+    try {
+      const byType = {};
+      currentBatch.forEach(doc => {
+        const type = doc._type || 'registros';
+        if (!byType[type]) byType[type] = [];
+        byType[type].push(doc);
+      });
+
+      for (const [type, docs] of Object.entries(byType)) {
+        const collectionName = getCollectionName(type);
+        const collection = db.collection(collectionName);
+        await collection.insertMany(docs);
+      }
+
+      const latency = Date.now() - t0;
+      inserted += currentBatch.length;
+      insertCounter.inc(currentBatch.length);
+      batchInsertLatencies.push(latency);
+      batchLatencyHistogram.observe(latency);
+    } catch (insertErr) {
+      errors += currentBatch.length;
+      errCounter.inc(currentBatch.length);
+      console.error(`[ERROR] Fallo inserción: ${insertErr.message}`);
+    }
+  }
+
+  async function gracefulShutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log('Cerrando consumer y flush de batch pendiente...');
+    clearInterval(flushInterval);
+    try {
+      await flushBatch();
+    } catch (err) {
+      console.error('Error al flush batch durante shutdown:', err.message || err);
+    }
+    try {
+      await consumer.disconnect();
+    } catch (err) {
+      console.error('Error al desconectar consumer:', err.message || err);
+    }
+    const finalStats = saveStats();
+    console.log('Resumen final:', finalStats);
+    process.exit(0);
+  }
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+
+  flushInterval = setInterval(async () => {
+    if (flushInProgress || shuttingDown) return;
+    if (Date.now() - lastBatchFlush >= BATCH_MAX_WAIT_MS) {
+      flushInProgress = true;
+      try {
+        await flushBatch();
+      } catch (err) {
+        console.error('Error en flush periódico:', err.message || err);
+      } finally {
+        flushInProgress = false;
+      }
+    }
+  }, BATCH_MAX_WAIT_MS);
 
   await consumer.run({
     eachMessage: async ({ message }) => {
@@ -249,41 +314,10 @@ async function run() {
         msgCounter.inc();
         
         batch.push(data);
+        const now = Date.now();
         
-        // LOTE: Cuando se alcanza el tamaño configurado
-        if (batch.length >= BATCH_SIZE) {
-          const t0 = Date.now();
-          
-          try {
-            // AGRUPACION: Agrupar por tipo
-            const byType = {};
-            batch.forEach(doc => {
-              const type = doc._type || 'registros';
-              if (!byType[type]) byType[type] = [];
-              byType[type].push(doc);
-            });
-            
-            // INSERCION: MongoDB (una por colección)
-            for (const [type, docs] of Object.entries(byType)) {
-              const collection = getCollection(type);
-              await collection.insertMany(docs);
-            }
-            
-            const latency = Date.now() - t0;
-            
-            inserted += batch.length;
-            insertCounter.inc(batch.length);
-            batchInsertLatencies.push(latency);
-            batchLatencyHistogram.observe(latency);
-            
-            console.log(`[INSERT] Lote ${Math.floor(inserted / BATCH_SIZE)}: ${batch.length} docs en ${latency}ms`);
-            batch = [];
-          } catch (insertErr) {
-            errors += batch.length;
-            errCounter.inc(batch.length);
-            console.error(`[ERROR] Fallo inserción: ${insertErr.message}`);
-            batch = [];
-          }
+        if (batch.length >= BATCH_SIZE || now - lastBatchFlush >= BATCH_MAX_WAIT_MS) {
+          await flushBatch();
         }
       } catch (parseErr) {
         errors++;
@@ -298,9 +332,6 @@ async function run() {
 run().catch(async err => {
   console.error('Error en consumer:', err);
   const finalStats = saveStats();
-  console.log(`\n╔══════════════════════════════════════════╗`);
-  console.log(`║  Ejecución #${EXECUTION_ID} Finalizada    ║`);
-  console.log(`╚══════════════════════════════════════════╝`);
-  console.log(`\nResumen final:\n`, finalStats);
+  console.log(`Resumen final:`, finalStats);
   process.exit(1);
 });
