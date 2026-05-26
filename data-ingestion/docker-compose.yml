@@ -19,8 +19,11 @@ services:
     ports:
       - '9092:9092'
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - /run/media/javi/Ventoy/kafka_logs:/var/lib/kafka/data
+    networks:
+      - basedr_backend
     restart: unless-stopped
+
 
   consumer:
     build: .
@@ -40,7 +43,13 @@ services:
     restart: unless-stopped
     volumes:
       - ../data:/app/data
+    networks:
+      - basedr_backend
 
 volumes:
   kafka_data:
     driver: local
+
+networks:
+  basedr_backend:
+    external: true

@@ -3,6 +3,7 @@ logs/
 data/
 .env
 .DS_Store
+api-comparison/.env
 
 # private SSH keys (accidentally committed)
 no

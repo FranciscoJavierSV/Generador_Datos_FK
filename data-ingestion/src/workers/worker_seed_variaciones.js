@@ -44,7 +44,14 @@ function generarVariacion(producto, index, listaPrecios) {
 }
 
 async function run({ start, end, batch = 1000, uri }) {
-  const mongo = new MongoClient(uri);
+  const mongo = new MongoClient(uri, {
+    serverSelectionTimeoutMS: 60000,
+    socketTimeoutMS: 120000,
+    connectTimeoutMS: 60000,
+    retryWrites: false,
+    maxPoolSize: 5,
+    minPoolSize: 1
+  });
   try {
     await mongo.connect();
     const db = mongo.db('baseDR');
@@ -70,9 +77,10 @@ async function run({ start, end, batch = 1000, uri }) {
     const listaPrecios = new ObjectId(Object.keys(LISTAS_PRECIOS)[0]);
     let total = 0;
     const buffer = [];
+    const cursorBatchSize = Math.max(100, Math.floor(batch / 2));
 
     console.log(`[Variaciones] Generando variaciones para ${target} productos`);
-    const cursor = collection.find().limit(target).batchSize(batch);
+    const cursor = collection.find().limit(target).batchSize(cursorBatchSize);
     let index = 0;
 
     while (await cursor.hasNext()) {
@@ -86,6 +94,11 @@ async function run({ start, end, batch = 1000, uri }) {
           messages: buffer.splice(0, batch).map(d => ({ value: JSON.stringify(d) }))
         });
         total += batch;
+        if (total % (batch * 10) === 0) {
+          console.log(`[Variaciones] Progreso ${total}/${target}`);
+        }
+        // Pequeño delay para no presionar MongoDB
+        await new Promise(r => setTimeout(r, 100));
       }
     }
 

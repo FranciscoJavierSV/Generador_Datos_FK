@@ -22,11 +22,10 @@ services:
     ports:
       - '9092:9092'
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - /run/media/javi/Ventoy/kafka_logs:/var/lib/kafka/data
+    networks:
+      - basedr_backend
     restart: unless-stopped
-
-  # NOTA: seed_app no se inicia automáticamente
-  # Ejecutar manualmente: docker-compose run seed_app
 
   consumer:
     build:
@@ -49,6 +48,8 @@ services:
       - ./data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - basedr_backend
 
   seed_app:
     build: ./data-ingestion
@@ -68,6 +69,8 @@ services:
     restart: "no"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - basedr_backend
 
   prometheus:
     image: prom/prometheus:latest
@@ -79,6 +82,8 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+    networks:
+      - basedr_backend
     restart: unless-stopped
 
   grafana:
@@ -93,6 +98,8 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+    networks:
+      - basedr_backend
 
 volumes:
   kafka_data:
@@ -102,3 +109,6 @@ volumes:
   grafana_data:
     driver: local
 
+networks:
+  basedr_backend:
+    external: true

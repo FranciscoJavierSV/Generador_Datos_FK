@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "4000:4000"
+    env_file: .env
     environment:
       - MONGO_URI=${MONGO_URI}
       - DB_NAME=${DB_NAME:-baseDR}
@@ -13,7 +14,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - basedr_backend
+
 
 volumes:
   api_logs:
     driver: local
+
+networks:
+  basedr_backend:
+    external: true
+

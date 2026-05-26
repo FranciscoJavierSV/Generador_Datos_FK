@@ -10,6 +10,8 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=60d'
+    networks:
+      - basedr_backend
     restart: unless-stopped
 
   grafana:
@@ -25,9 +27,16 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+    networks:
+      - basedr_backend
+
 
 volumes:
   prometheus_data:
     driver: local
   grafana_data:
     driver: local
+
+networks:
+  basedr_backend:
+    external: true
